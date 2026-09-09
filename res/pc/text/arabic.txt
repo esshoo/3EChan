@@ -11,7 +11,7 @@
 القائمة الرئيسية
 
 [FE_XTG]
-خروج من اللعبة
+الخروج من اللعبة
 
 [FE_QUI]
 جارٍ الخروج...
@@ -23,10 +23,10 @@
 متابعة
 
 [FE_AUTO_WARN]
-This game has an auto save feature. Please don't turn off the game when you see this icon.
+تحتوي هذه اللعبة على ميزة الحفظ التلقائي. يُرجى عدم إيقاف تشغيل اللعبة عند ظهور هذا الرمز.
 
 [FE_AUTO_FAIL]
-Auto save failed.
+فشل الحفظ التلقائي.
 
 [FE_WARN]
 تحذير
@@ -38,37 +38,37 @@ Auto save failed.
 اضغط أي زر للبدء
 
 [FE_TLC]
-Press <ACT:MENU_CONFIRM> to continue
+اضغط <ACT:MENU_CONFIRM> للمتابعة
 
 [FE_TLHD]
-Level Results
+نتائج المرحلة
 
 [FE_TLFG]
-Fight
+القتال
 
 [FE_TLCB]
-Combo
+الكومبو
 
 [FE_TLSY]
-Style
+الأسلوب
 
 [FE_TLGD]
-Grade
+التقييم
 
 [FE_TLRD]
-Red Dragons
+التنانين الحمراء
 
 [FE_TLGO]
-Gold Dragons
+التنانين الذهبية
 
 [FE_TLBG]
-BONUS +1 GOLD DRAGON
+مكافأة +1 تنين ذهبي
 
 [FE_TLDB]
-DRAGON BONUS
+مكافأة التنين
 
 [FE_TLMB]
-MOVIE BONUS UNLOCKED
+تم فتح مكافأة الفيلم
 
 [FE_RSM]
 استئناف اللعبة
@@ -86,46 +86,46 @@ MOVIE BONUS UNLOCKED
 حذف الحفظ
 
 [FE_SLE]
-Save Slot %d Empty
+خانة الحفظ %d فارغة
 
 [FE_SLD]
-Save Slot %d - %s
+خانة الحفظ %d - %s
 
 [FE_SLAE]
-Autosave Empty
+الحفظ التلقائي فارغ
 
 [FE_SLAD]
-Autosave - %s
+الحفظ التلقائي - %s
 
 [FE_SVAUTO]
-AUTOSAVE
+الحفظ التلقائي
 
 [FE_SVAUTO_SHORT]
-AUTO
+تلقائي
 
 [FE_SVMAN]
-SAVE SLOTS
+خانات الحفظ
 
 [FE_SVEMPTY]
-EMPTY
+فارغة
 
 [FE_SVC_SLOT]
-SLOT
+الخانة
 
 [FE_SVC_DATE]
-SAVED
+الحفظ
 
 [FE_SVC_LIVES]
-LIVES
+الأرواح
 
 [FE_SVC_RED]
-RED
+أحمر
 
 [FE_SVC_GOLD]
-GOLD
+ذهبي
 
 [FE_SVC_ZONE]
-NEXT ZONE
+المنطقة التالية
 
 [FE_OPT]
 الإعدادات
@@ -161,58 +161,58 @@ NEXT ZONE
 إعدادات الصوت
 
 [FE_CRE]
-الاعتمادات
+فريق العمل
 
 [FE_BCK]
 رجوع
 
 [FE_CSH]
-Vibration:
+الاهتزاز:
 
 [FE_CCF]
-Configuration:
+تكوين التحكم:
 
 [FE_BPTS]
-Button Prompts:
+رموز الأزرار:
 
 [FE_DEFX]
-Default (Xbox)
+الافتراضي (Xbox)
 
 [FE_NX]
 Nintendo Switch
 
 [FE_CSD]
-STATUS DISPLAY
+عرض الحالة
 
 [FE_CCT]
-COUNTER
+الصد
 
 [FE_CMV]
-MOVE PLAYER
+تحريك اللاعب
 
 [FE_CNU]
-UNUSED
+غير مستخدم
 
 [FE_CMO]
-MENU
+القائمة
 
 [FE_CST]
-STRAFE
+حركة جانبية
 
 [FE_CDR]
-DIVE ROLL
+تدحرج اندفاعي
 
 [FE_CPN]
-PUNCH
+لكمة
 
 [FE_CKK]
-KICK
+ركلة
 
 [FE_CGR]
-GRAB
+إمساك
 
 [FE_CJP]
-JUMP
+قفز
 
 [FE_CF1]
 1
@@ -224,139 +224,139 @@ JUMP
 3
 
 [FE_KBD]
-Key Bindings
+تخصيص الأزرار
 
 [FE_KBACT]
-Action
+الإجراء
 
 [FE_KBBN1]
-Bind 1
+تعيين 1
 
 [FE_KBBN2]
-Bind 2
+تعيين 2
 
 [JUMP]
-Jump
+قفز
 
 [PUNCH]
-Punch
+لكمة
 
 [KICK]
-Kick
+ركلة
 
 [GRAB]
-Grab
+إمساك
 
 [DIVE_ROLL]
-Dive Roll
+تدحرج اندفاعي
 
 [STRAFE]
-Strafe
+حركة جانبية
 
 [COUNTER]
-Counter
+صد
 
 [STATUS_DISPLAY]
-Status
+الحالة
 
 [MOVE_UP]
-Move Up
+تحريك لأعلى
 
 [MOVE_DOWN]
-Move Down
+تحريك لأسفل
 
 [MOVE_LEFT]
-Move Left
+تحريك لليسار
 
 [MOVE_RIGHT]
-Move Right
+تحريك لليمين
 
 [OPEN_CLOSE_MENU]
-Open/Close Menu
+فتح/إغلاق القائمة
 
 [MENU_UP]
-Menu Up
+القائمة لأعلى
 
 [MENU_DOWN]
-Menu Down
+القائمة لأسفل
 
 [MENU_LEFT]
-Menu Left
+القائمة لليسار
 
 [MENU_RIGHT]
-Menu Right
+القائمة لليمين
 
 [MENU_CONFIRM]
-Confirm
+تأكيد
 
 [MENU_BACK]
-Back
+رجوع
 
 [MENU_CLEAR]
-Clear
+مسح
 
 [FE_KBPR]
-Press key or mouse
+اضغط مفتاحًا أو زر الماوس
 
 [FE_KBNAV]
-<ACT:MENU_UP>/<ACT:MENU_DOWN> Action
+<ACT:MENU_UP>/<ACT:MENU_DOWN> الإجراء
 
 [FE_KBSLT]
-<ACT:MENU_LEFT>/<ACT:MENU_RIGHT> Slot
+<ACT:MENU_LEFT>/<ACT:MENU_RIGHT> الخانة
 
 [FE_KBBND]
-<ACT:MENU_CONFIRM> Bind
+<ACT:MENU_CONFIRM> تعيين
 
 [FE_KBCLR]
-<ACT:MENU_CLEAR> Unbind
+<ACT:MENU_CLEAR> إلغاء التعيين
 
 [FE_KBCAN]
-<ACT:MENU_BACK> Cancel
+<ACT:MENU_BACK> إلغاء
 
 [FE_KBBCK]
-<ACT:MENU_BACK> Back
+<ACT:MENU_BACK> رجوع
 
 [FE_HPADJ]
-<ACT:MENU_LEFT>/<ACT:MENU_RIGHT> Adjust
+<ACT:MENU_LEFT>/<ACT:MENU_RIGHT> تعديل
 
 [FE_HPSCR]
-<ACT:MENU_UP>/<ACT:MENU_DOWN> Scroll
+<ACT:MENU_UP>/<ACT:MENU_DOWN> تمرير
 
 [FE_HPSET]
-<ACT:MENU_CONFIRM> Set
+<ACT:MENU_CONFIRM> تعيين
 
 [FE_HPTGL]
-<ACT:MENU_CONFIRM> Toggle
+<ACT:MENU_CONFIRM> تبديل
 
 [FE_HPSEL]
-<ACT:MENU_CONFIRM> Select
+<ACT:MENU_CONFIRM> اختيار
 
 [FE_HPBCK]
-<ACT:MENU_BACK> Back
+<ACT:MENU_BACK> رجوع
 
 [FE_NTD]
-Not Used
+غير مستخدم
 
 [FE_RES]
-Resolution:
+الدقة:
 
 [FE_FSC]
-Screen Mode:
+وضع الشاشة:
 
 [FE_SCW]
-Windowed
+نافذة
 
 [FE_SCB]
-Borderless
+نافذة بلا حدود
 
 [FE_SCF]
-Fullscreen
+ملء الشاشة
 
 [FE_VYS]
-V-Sync:
+المزامنة الرأسية:
 
 [FE_FPS]
-Frame Rate:
+معدل الإطارات:
 
 [FE_FR30]
 30
@@ -368,16 +368,16 @@ Frame Rate:
 120
 
 [FE_MAX]
-Unlimited
+بلا حد
 
 [FE_MSA]
-Anti-Aliasing:
+تنعيم الحواف:
 
 [FE_DSH]
-Dynamic Shadows:
+الظلال الديناميكية:
 
 [FE_DSS]
-Shadow Softness:
+نعومة الظلال:
 
 [FE_A2X]
 2X
@@ -392,34 +392,34 @@ Shadow Softness:
 16X
 
 [FE_EFV]
-Effects Volume:
+مستوى المؤثرات:
 
 [FE_MSV]
-Music Volume:
+مستوى الموسيقى:
 
 [FE_VCV]
-Voice Volume:
+مستوى الأصوات:
 
 [FE_STR]
-Stereo:
+ستيريو:
 
 [FE_NGQ]
-Are you sure you want to start a new game? All current game progress will be lost. Proceed?
+هل أنت متأكد من بدء لعبة جديدة؟ سيتم فقدان كل تقدم اللعبة الحالي. هل تريد المتابعة؟
 
 [FE_SVQ]
-Are you sure you want to save to this slot?
+هل أنت متأكد من الحفظ في هذه الخانة؟
 
 [FE_DLQ]
-Are you sure you want to delete this save slot?
+هل أنت متأكد من حذف خانة الحفظ هذه؟
 
 [FE_SVD]
-Game file successfully saved.
+تم حفظ ملف اللعبة بنجاح.
 
 [FE_DLD]
-Game file successfully deleted.
+تم حذف ملف اللعبة بنجاح.
 
 [FE_LDQ]
-All unsaved progress in your current game will be lost. Proceed with loading?
+سيتم فقدان كل التقدم غير المحفوظ في لعبتك الحالية. هل تريد متابعة التحميل؟
 
 [FE_YS]
 نعم
@@ -434,25 +434,25 @@ All unsaved progress in your current game will be lost. Proceed with loading?
 إيقاف
 
 [FE_LOW]
-Low
+منخفض
 
 [FE_MED]
-Medium
+متوسط
 
 [FE_HIG]
-High
+مرتفع
 
 [FE_VHI]
-Very High
+مرتفع جدًا
 
 [FE_ON]
 تشغيل
 
 [FE_AUT]
-Auto
+تلقائي
 
 [FE_XGM]
-Are you sure you want to exit the game?
+هل أنت متأكد من رغبتك في الخروج من اللعبة؟
 
 [FE_PSD]
 إيقاف مؤقت
@@ -461,185 +461,185 @@ Are you sure you want to exit the game?
 استئناف اللعبة
 
 [FE_EXL]
-Exit Level
+الخروج من المرحلة
 
 [FE_EXLR]
-Are you sure you want to exit this level?
+هل أنت متأكد من رغبتك في الخروج من هذه المرحلة؟
 
 [FE_GRD]
-GRADE:
+التقييم:
 
 [FE_LVL]
-Level %d
+المرحلة %d
 
 [FE_ZONE]
-Zone %d
+المنطقة %d
 
 [FE_LOC_CHN]
-Chinatown
+الحي الصيني
 
 [FE_LOC_WTR]
-Waterfront
+الواجهة البحرية
 
 [FE_LOC_SWR]
-Sewer
+المجاري
 
 [FE_LOC_ROF]
-Roof Top
+سطح المبنى
 
 [FE_LOC_FAC]
-Factory
+المصنع
 
 [FE_LOC_TMP]
-Shaolin Temple
+معبد شاولين
 
 [FE_LOC_DST]
-Destination Select
+اختيار الوجهة
 
 [FE_HPNM]
-JACKIE
+جاكي
 
 [FE_HBOS]
-BOSS
+الزعيم
 
 [FE_DTG]
-TOTAL GOLD DRAGONS  %d
+إجمالي التنانين الذهبية  %d
 
 [FE_DTRV]
-TRAVEL TO
+السفر إلى
 
 [FE_DCMP]
-COMPLETED
+مكتمل
 
 [FE_DNCM]
-NOT COMPLETED
+غير مكتمل
 
 #
 # Auto Updater
 #
 [FE_UPD]
-Game Update
+تحديث اللعبة
 
 [FE_UPD_CHK]
-Checking for updates...
+جارٍ البحث عن تحديثات...
 
 [FE_UPD_UTD]
-You're up to date!
+لديك أحدث إصدار!
 
 [FE_UPD_ERR]
-Update check failed: %s
+فشل البحث عن تحديث: %s
 
 [FE_UPD_CUR]
-Current Version: %s
+الإصدار الحالي: %s
 
 [FE_UPD_LAT]
-New Version Available: %s
+يتوفر إصدار جديد: %s
 
 [FE_UPD_NOTES]
-What's New
+ما الجديد
 
 [FE_UPD_NOCHANGE]
-No changelog available.
+لا توجد قائمة تغييرات متاحة.
 
 [FE_UPD_DL]
-Download Update
+تنزيل التحديث
 
 [FE_UPD_RMD]
-Remind Me Later
+ذكّرني لاحقًا
 
 [FE_UPD_CHKNOW]
-Check for Updates
+البحث عن تحديثات
 
 [FE_UPD_PRG]
-Downloading... %d%%
+جارٍ التنزيل... %d%%
 
 [FE_UPD_CNL]
-Cancel
+إلغاء
 
 [FE_UPD_RDY]
-Update downloaded and ready to install.
+تم تنزيل التحديث وهو جاهز للتثبيت.
 
 [FE_UPD_INST]
-Install & Restart
+تثبيت وإعادة التشغيل
 
 [FE_UPD_INSTG]
-Installing update...
+جارٍ تثبيت التحديث...
 
 [FE_UPD_AVAIL]
-Update available
+يتوفر تحديث
 
 #
 # Asset Extraction
 #
 [FE_ASSET_TITLE]
-Game Assets
+موارد اللعبة
 
 [FE_ASSET_MISS]
-PSX game assets were not found. Place your original game disc image (.bin or .iso) in the "discimage" folder, then click Extract Assets.
+لم يتم العثور على موارد لعبة PSX. ضع صورة قرص اللعبة الأصلية بصيغة .bin أو .iso داخل مجلد "discimage"، ثم اختر استخراج الموارد.
 
 [FE_ASSET_EXT]
-Extract Assets
+استخراج الموارد
 
 [FE_ASSET_RESCAN]
-Scan Again
+إعادة الفحص
 
 [FE_ASSET_SCAN]
-Scanning for disc image...
+جارٍ البحث عن صورة القرص...
 
 [FE_ASSET_NONE]
-No .bin or .iso file found in the "discimage" folder. Add your disc image there and try again.
+لم يتم العثور على ملف .bin أو .iso داخل مجلد "discimage". أضف صورة القرص ثم حاول مرة أخرى.
 
 [FE_ASSET_MULTI]
-Multiple .bin/.iso files found in "discimage". Please keep only one and try again.
+تم العثور على عدة ملفات .bin/.iso داخل مجلد "discimage". يُرجى الإبقاء على ملف واحد فقط ثم المحاولة مرة أخرى.
 
 [FE_ASSET_ONE]
-Disc image found. Ready to extract.
+تم العثور على صورة القرص. جاهز للاستخراج.
 
 [FE_ASSET_EXTG]
-Extracting game assets...
+جارٍ استخراج موارد اللعبة...
 
 [FE_ASSET_ERR]
-Extraction failed: %s
+فشل الاستخراج: %s
 
 #
 # Mods and Cheats
 #
 [FE_MODS]
-Mods
+التعديلات
 
 [FE_MOD_NONE]
-No mods installed
+لا توجد تعديلات مثبتة
 
 [FE_CHEATS]
-Cheats
+خيارات الغش
 
 [FE_CH_DRAG]
-All Dragons:
+كل التنانين:
 
 [FE_CH_LEVL]
-All Levels:
+كل المراحل:
 
 [FE_CH_GOD]
-God Mode:
+وضع الخلود:
 
 [FE_CH_PNCH]
-One Punch Man:
+ضربة واحدة:
 
 [FE_CH_HVN]
-Heaven Bound:
+التحليق للسماء:
 
 [FE_CH_BOBL]
-Bobble Head:
+رأس متأرجح:
 
 [FE_CH_QUAKE]
-Stuntquake:
+هزة استعراضية:
 
 [FE_CH_MIRR]
-Mirror World:
+عالم المرآة:
 
 #
 # PSX overrides
 #
 
 [0xC131692D]
-Press <ACT:OPEN_CLOSE_MENU> to open the main menu.
+اضغط <ACT:OPEN_CLOSE_MENU> لفتح القائمة الرئيسية.
