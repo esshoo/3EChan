@@ -3,12 +3,31 @@
 #include "gen/common.h"
 #include "pc/log.h"
 #include "p3d/fileio.h"
+#include <cstdlib>
 #if CUSTOM_TEXT
 #include "extra/customtext.h"
 #endif
 
 
 TextManager* g_textManager = nullptr;
+
+static TextRenderState ResolveLocalizedRenderState(
+    const TextManager* manager,
+    const TextRenderState& source) {
+    TextRenderState state = source;
+
+#if CUSTOM_TEXT
+    if (manager && g_customText.GetLanguage() == LangArabic) {
+        const TextFontHandle arabicFont = manager->FindFont("Arabic");
+
+        if (arabicFont) {
+            state.font = arabicFont;
+        }
+    }
+#endif
+
+    return state;
+}
 
 TextManager::~TextManager() {
     Shutdown();
@@ -28,6 +47,38 @@ void TextManager::Init() {
     if (m_backend && !m_backend->Init()) {
         LOG("[TextManager] Backend init failed");
     }
+
+#if CUSTOM_TEXT && defined(RC_PLATFORM_WINDOWS)
+    const char* windowsDir = std::getenv("WINDIR");
+    bool arabicFontLoaded = false;
+
+    if (windowsDir && windowsDir[0]) {
+        static const char* kArabicFontFiles[] = {
+            "tahoma.ttf",
+            "arial.ttf",
+            "segoeui.ttf",
+        };
+
+        for (const char* fontFile : kArabicFontFiles) {
+            const std::string fontPath = std::string(windowsDir) + "/Fonts/" + fontFile;
+
+            TextFontDesc arabicDesc = {};
+            arabicDesc.name = "Arabic";
+            arabicDesc.path = fontPath.c_str();
+            arabicDesc.pixelHeight = 48;
+
+            if (LoadFont(arabicDesc)) {
+                LOG("[TextManager] Arabic font loaded: %s", fontPath.c_str());
+                arabicFontLoaded = true;
+                break;
+            }
+        }
+    }
+
+    if (!arabicFontLoaded) {
+        LOG("[TextManager] WARNING: No Arabic-capable Windows font could be loaded");
+    }
+#endif
 }
 
 void TextManager::Shutdown() {
@@ -169,7 +220,8 @@ void TextManager::SetPromptsEnabled(bool enabled) {
 
 TextBounds TextManager::MeasureString(Utf8TextView text) const {
     if (m_backend) {
-        return m_backend->Measure(text, m_state);
+        const TextRenderState state = ResolveLocalizedRenderState(this, m_state);
+        return m_backend->Measure(text, state);
     }
 
     TextBounds bounds = {};
@@ -181,7 +233,8 @@ TextBounds TextManager::MeasureString(Utf8TextView text) const {
 
 s32 TextManager::CountWrappedLines(Utf8TextView text) const {
     if (m_backend) {
-        return m_backend->CountWrappedLines(text, m_state);
+        const TextRenderState state = ResolveLocalizedRenderState(this, m_state);
+        return m_backend->CountWrappedLines(text, state);
     }
 
     return text.IsEmpty() ? 0 : 1;
@@ -224,14 +277,15 @@ void TextManager::PrintString(Utf8TextView text, f32 x, f32 y) const {
         return;
     }
 
-    const LoadedFont* font = FindLoadedFont(m_state.font);
+    const TextRenderState state = ResolveLocalizedRenderState(this, m_state);
+    const LoadedFont* font = FindLoadedFont(state.font);
     if (!font) {
         LOG("[TextManager] PrintString called without a valid font selected");
         return;
     }
 
     if (m_backend) {
-        m_backend->Draw(text, x, y, m_state);
+        m_backend->Draw(text, x, y, state);
     }
 
     if ((!m_backend || !m_backend->IsReady()) && !m_warnedNoBackend) {
