@@ -529,6 +529,7 @@ static const char* GetLanguageDisplayToken(s32 index) {
         case LangFrench: return "FE_LFRE";
         case LangItalian: return "FE_LITA";
         case LangSpanish: return "FE_LSPA";
+        case LangArabic: return "FE_LARA";
         default: return nullptr;
     }
 }
