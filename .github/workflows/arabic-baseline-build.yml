@@ -1,0 +1,174 @@
+name: 3EChan - Arabic Baseline Build
+
+on:
+  workflow_dispatch:
+
+  push:
+    branches:
+      - feature/arabic-localization
+
+permissions:
+  contents: read
+
+concurrency:
+  group: 3echan-arabic-baseline-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows-baseline:
+    name: Windows VS2026 Baseline
+    runs-on: windows-2025-vs2026
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout 3EChan
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Download and verify Premake on GitHub runner
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          $Version = "5.0.0-beta8"
+          $Url = "https://github.com/premake/premake-core/releases/download/v$Version/premake-$Version-windows.zip"
+
+          $ExpectedSha256 = "e64ce2ed8778e0098f63674cca61fe33941b5f0c8d9a4afd651152bdea3758ab"
+
+          $ZipPath = Join-Path $env:RUNNER_TEMP "premake.zip"
+          $PremakeDir = Join-Path $env:RUNNER_TEMP "premake"
+
+          Write-Host "Downloading Premake on GitHub runner only..."
+          Invoke-WebRequest -Uri $Url -OutFile $ZipPath
+
+          $ActualSha256 = (Get-FileHash $ZipPath -Algorithm SHA256).Hash.ToLowerInvariant()
+
+          Write-Host "Expected SHA256: $ExpectedSha256"
+          Write-Host "Actual SHA256:   $ActualSha256"
+
+          if ($ActualSha256 -ne $ExpectedSha256) {
+              throw "Premake archive SHA256 verification FAILED."
+          }
+
+          New-Item -ItemType Directory -Force $PremakeDir | Out-Null
+          Expand-Archive -Path $ZipPath -DestinationPath $PremakeDir -Force
+
+          $PremakeExe = Get-ChildItem `
+              -Path $PremakeDir `
+              -Filter "premake5.exe" `
+              -Recurse |
+              Select-Object -First 1
+
+          if (-not $PremakeExe) {
+              throw "premake5.exe was not found after extraction."
+          }
+
+          Write-Host "Premake: $($PremakeExe.FullName)"
+
+          "PREMAKE_EXE=$($PremakeExe.FullName)" |
+              Out-File `
+                  -FilePath $env:GITHUB_ENV `
+                  -Encoding utf8 `
+                  -Append
+
+          & $PremakeExe.FullName --version
+
+      - name: Detect Visual Studio 2026
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          $VsWhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+
+          if (-not (Test-Path $VsWhere)) {
+              throw "vswhere.exe was not found."
+          }
+
+          Write-Host "Installed Visual Studio instances:"
+
+          & $VsWhere `
+              -products * `
+              -format table
+
+          $MSBuild = & $VsWhere `
+              -latest `
+              -products * `
+              -requires Microsoft.Component.MSBuild `
+              -find "MSBuild\**\Bin\MSBuild.exe" |
+              Select-Object -First 1
+
+          if (-not $MSBuild) {
+              throw "MSBuild was not found."
+          }
+
+          Write-Host "MSBuild: $MSBuild"
+
+          "MSBUILD_EXE=$MSBuild" |
+              Out-File `
+                  -FilePath $env:GITHUB_ENV `
+                  -Encoding utf8 `
+                  -Append
+
+      - name: Generate VS2026 solution on GitHub runner
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          & $env:PREMAKE_EXE vs2026
+
+          if ($LASTEXITCODE -ne 0) {
+              throw "Premake generation failed with exit code $LASTEXITCODE."
+          }
+
+          if (-not (Test-Path ".\build\rechan.sln")) {
+              throw "build/rechan.sln was not generated."
+          }
+
+          Write-Host "Visual Studio solution generated successfully on GitHub runner."
+
+      - name: Build Debug x64
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          & $env:MSBUILD_EXE `
+              ".\build\rechan.sln" `
+              /m `
+              /p:Configuration=Debug `
+              /p:Platform=x64 `
+              /verbosity:minimal
+
+          if ($LASTEXITCODE -ne 0) {
+              throw "Debug x64 build failed with exit code $LASTEXITCODE."
+          }
+
+          Write-Host "DEBUG x64 BUILD PASSED."
+
+      - name: Build Release x64
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          & $env:MSBUILD_EXE `
+              ".\build\rechan.sln" `
+              /m `
+              /p:Configuration=Release `
+              /p:Platform=x64 `
+              /verbosity:minimal
+
+          if ($LASTEXITCODE -ne 0) {
+              throw "Release x64 build failed with exit code $LASTEXITCODE."
+          }
+
+          Write-Host "RELEASE x64 BUILD PASSED."
+
+      - name: Baseline passed
+        shell: pwsh
+        run: |
+          Write-Host ""
+          Write-Host "======================================="
+          Write-Host "3EChan ARABIC BASELINE BUILD PASSED"
+          Write-Host "======================================="
+          Write-Host ""
+          Write-Host "No generated Visual Studio files were created on the user's PC."
