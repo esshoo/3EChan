@@ -698,4 +698,4 @@ Nintendo Switch
 مفتاح %d
 
 [FE_CH_99L]
-منح 99 حياة
+99 حياة

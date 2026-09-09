@@ -105,6 +105,7 @@ enum EntryBinding : u8 {
     EntryBinding_CheatBobbleHead,
     EntryBinding_CheatStuntquake,
     EntryBinding_CheatMirrorWorld,
+    EntryBinding_CheatLives99,
 #endif
 };
 
@@ -134,7 +135,6 @@ enum EntryEvent : u8 {
     EntryEvent_ScanForAssets,
     EntryEvent_ExtractAssets,
     EntryEvent_QuitFromAssetCheck,
-    EntryEvent_Give99Lives,
 };
 
 #define MAX_ENTRIES_PER_MENU (12)

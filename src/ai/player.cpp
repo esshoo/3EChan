@@ -322,6 +322,9 @@ void Player::Think() {
     MARKFUNCTION(0x8002FE30);
 #if NEW_CHEATS
     if (IsCheatEnabled(CheatOption::GodMode)) health = maxHealth;
+    if (IsCheatEnabled(CheatOption::Lives99) && livesLeft < 99) {
+        SetLivesLeft(99);
+    }
 #endif
     // PSX: CHumanoidSound think, encounter check, behaviour process,
     // ProcessAction, Move, combo tracking, input read

@@ -19,6 +19,7 @@ static bool s_heavenBound = false;
 static bool s_bobbleHead = false;
 static bool s_stuntquake = false;
 static bool s_mirrorWorld = false;
+static bool s_lives99 = false;
 static PetalStats s_dragonSnapshot[21] = {};
 static PetalStats s_levelSnapshot[21] = {};
 static u8 s_currentGoldSnapshot = 0;
@@ -35,6 +36,7 @@ static bool* GetCheatFlag(CheatOption option) {
         case CheatOption::BobbleHead: return &s_bobbleHead;
         case CheatOption::Stuntquake: return &s_stuntquake;
         case CheatOption::MirrorWorld: return &s_mirrorWorld;
+        case CheatOption::Lives99: return &s_lives99;
     }
     return nullptr;
 }
@@ -113,10 +115,7 @@ void SetCheatEnabled(CheatOption option, bool enabled) {
     else if (option == CheatOption::GodMode && Player::s_player) {
         Player::s_player->health = Player::s_player->maxHealth;
     }
-}
-
-void Grant99Lives() {
-    if (Player::s_player) {
+    else if (option == CheatOption::Lives99 && Player::s_player) {
         Player::s_player->SetLivesLeft(99);
     }
 }
@@ -130,6 +129,7 @@ void ResetCheats() {
     SetCheatEnabled(CheatOption::BobbleHead, false);
     SetCheatEnabled(CheatOption::Stuntquake, false);
     SetCheatEnabled(CheatOption::MirrorWorld, false);
+    SetCheatEnabled(CheatOption::Lives99, false);
 }
 
 #endif
