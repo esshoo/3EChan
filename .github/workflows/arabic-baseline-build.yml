@@ -176,6 +176,31 @@ jobs:
 
           Write-Host "RELEASE x64 BUILD PASSED."
 
+      - name: Package Windows Release
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          & ".\scripts\pack-win64.ps1" -Root "."
+
+          if (-not (Test-Path ".\shipping\rechan-win64.zip")) {
+              throw "shipping/rechan-win64.zip was not created."
+          }
+
+          $Package = Get-Item ".\shipping\rechan-win64.zip"
+
+          Write-Host "Package created:"
+          Write-Host "  $($Package.FullName)"
+          Write-Host "  Size: $($Package.Length) bytes"
+
+      - name: Upload 3EChan Windows Release
+        uses: actions/upload-artifact@v4
+        with:
+          name: 3EChan-Windows-Release
+          path: shipping/rechan-win64.zip
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
       - name: Baseline passed
         shell: pwsh
         run: |
