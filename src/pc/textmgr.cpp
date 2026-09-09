@@ -1,5 +1,6 @@
 #include "pc/textmgr.h"
 #include "pc/textbackend.h"
+#include "pc/arabictext.h"
 #include "gen/common.h"
 #include "pc/log.h"
 #include "p3d/fileio.h"
@@ -29,6 +30,24 @@ static TextRenderState ResolveLocalizedRenderState(
     return state;
 }
 
+static Utf8TextView ResolveLocalizedText(
+    Utf8TextView source,
+    std::string& storage) {
+#if CUSTOM_TEXT
+    if (
+        g_customText.GetLanguage() == LangArabic &&
+        ArabicText::ContainsArabic(source)
+    ) {
+        storage = ArabicText::PrepareForDisplay(source);
+        return Utf8TextView(storage);
+    }
+#else
+    (void)storage;
+#endif
+
+    return source;
+}
+
 TextManager::~TextManager() {
     Shutdown();
 }
@@ -54,6 +73,9 @@ void TextManager::Init() {
 
     if (windowsDir && windowsDir[0]) {
         static const char* kArabicFontFiles[] = {
+            "tahomabd.ttf",
+            "arialbd.ttf",
+            "segoeuib.ttf",
             "tahoma.ttf",
             "arial.ttf",
             "segoeui.ttf",
@@ -221,7 +243,9 @@ void TextManager::SetPromptsEnabled(bool enabled) {
 TextBounds TextManager::MeasureString(Utf8TextView text) const {
     if (m_backend) {
         const TextRenderState state = ResolveLocalizedRenderState(this, m_state);
-        return m_backend->Measure(text, state);
+        std::string localizedStorage;
+        const Utf8TextView displayText = ResolveLocalizedText(text, localizedStorage);
+        return m_backend->Measure(displayText, state);
     }
 
     TextBounds bounds = {};
@@ -234,7 +258,9 @@ TextBounds TextManager::MeasureString(Utf8TextView text) const {
 s32 TextManager::CountWrappedLines(Utf8TextView text) const {
     if (m_backend) {
         const TextRenderState state = ResolveLocalizedRenderState(this, m_state);
-        return m_backend->CountWrappedLines(text, state);
+        std::string localizedStorage;
+        const Utf8TextView displayText = ResolveLocalizedText(text, localizedStorage);
+        return m_backend->CountWrappedLines(displayText, state);
     }
 
     return text.IsEmpty() ? 0 : 1;
@@ -278,6 +304,8 @@ void TextManager::PrintString(Utf8TextView text, f32 x, f32 y) const {
     }
 
     const TextRenderState state = ResolveLocalizedRenderState(this, m_state);
+    std::string localizedStorage;
+    const Utf8TextView displayText = ResolveLocalizedText(text, localizedStorage);
     const LoadedFont* font = FindLoadedFont(state.font);
     if (!font) {
         LOG("[TextManager] PrintString called without a valid font selected");
@@ -285,7 +313,7 @@ void TextManager::PrintString(Utf8TextView text, f32 x, f32 y) const {
     }
 
     if (m_backend) {
-        m_backend->Draw(text, x, y, state);
+        m_backend->Draw(displayText, x, y, state);
     }
 
     if ((!m_backend || !m_backend->IsReady()) && !m_warnedNoBackend) {
