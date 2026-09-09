@@ -17,6 +17,7 @@ enum class CheatOption {
 bool IsCheatEnabled(CheatOption option);
 void SetCheatEnabled(CheatOption option, bool enabled);
 void ApplyProgressCheats();
+void Grant99Lives();
 void ResetCheats();
 
 #endif

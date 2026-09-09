@@ -115,6 +115,12 @@ void SetCheatEnabled(CheatOption option, bool enabled) {
     }
 }
 
+void Grant99Lives() {
+    if (Player::s_player) {
+        Player::s_player->SetLivesLeft(99);
+    }
+}
+
 void ResetCheats() {
     SetCheatEnabled(CheatOption::AllDragons, false);
     SetCheatEnabled(CheatOption::AllLevels, false);

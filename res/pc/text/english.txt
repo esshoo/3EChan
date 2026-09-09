@@ -693,3 +693,6 @@ Asset extraction failed. Check the disc image and try again.
 
 [FE_KEY_FMT]
 Key%d
+
+[FE_CH_99L]
+Give 99 Lives

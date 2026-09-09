@@ -134,6 +134,7 @@ enum EntryEvent : u8 {
     EntryEvent_ScanForAssets,
     EntryEvent_ExtractAssets,
     EntryEvent_QuitFromAssetCheck,
+    EntryEvent_Give99Lives,
 };
 
 #define MAX_ENTRIES_PER_MENU (12)

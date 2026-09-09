@@ -183,11 +183,11 @@ jobs:
 
           & ".\scripts\pack-win64.ps1" -Root "."
 
-          if (-not (Test-Path ".\shipping\rechan-win64.zip")) {
-              throw "shipping/rechan-win64.zip was not created."
+          if (-not (Test-Path ".\shipping\3EChan-win64.zip")) {
+              throw "shipping/3EChan-win64.zip was not created."
           }
 
-          $Package = Get-Item ".\shipping\rechan-win64.zip"
+          $Package = Get-Item ".\shipping\3EChan-win64.zip"
 
           Write-Host "Package created:"
           Write-Host "  $($Package.FullName)"
@@ -197,7 +197,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: 3EChan-Windows-Release
-          path: shipping/rechan-win64.zip
+          path: shipping/3EChan-win64.zip
           if-no-files-found: error
           retention-days: 14
           compression-level: 0

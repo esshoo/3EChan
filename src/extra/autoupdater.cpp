@@ -226,7 +226,7 @@ std::string AutoUpdater::GetAssetExtension() {
 
 std::string AutoUpdater::GetExecutableName() {
 #ifdef RC_PLATFORM_WINDOWS
-    return "rechan.exe";
+    return "3EChan.exe";
 #elif defined(__APPLE__)
     return "rechan";
 #else
@@ -301,6 +301,9 @@ void AutoUpdater::InstallAndRelaunch() {
     std::snprintf(lineBuf, sizeof(lineBuf),
                   "powershell -Command \"Expand-Archive -Path '%s' -DestinationPath '%s' -Force\"\r\n",
                   m_tempArchivePath.c_str(), exeDir.c_str());
+    script += lineBuf;
+    // v1.1.1 migration: remove the legacy executable on the next update.
+    std::snprintf(lineBuf, sizeof(lineBuf), "del /f /q \"%s\\rechan.exe\" > nul 2>&1\r\n", exeDir.c_str());
     script += lineBuf;
     std::snprintf(lineBuf, sizeof(lineBuf), "del \"%s\"\r\n", m_tempArchivePath.c_str());
     script += lineBuf;

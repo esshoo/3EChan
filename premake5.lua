@@ -19,6 +19,7 @@ project "rechan"
     cppdialect "C++20"
     staticruntime "on"
     targetdir "bin"
+    targetname "3EChan"
     objdir    ("%{wks.location}/obj/" .. outputdir .. "/%{prj.name}")
     debugdir  "bin"
     multiprocessorcompile "on"

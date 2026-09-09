@@ -673,6 +673,7 @@ void feCustomMenuMgr::BuildPages() {
         Toggle("FE_CH_BOBL", EntryBinding_CheatBobbleHead),
         Toggle("FE_CH_QUAKE", EntryBinding_CheatStuntquake),
         Toggle("FE_CH_MIRR", EntryBinding_CheatMirrorWorld),
+        Button("FE_CH_99L", EntryEvent_Give99Lives),
         Button("FE_BCK", EntryEvent_Back),
                });
 #endif
@@ -2443,6 +2444,11 @@ void feCustomMenuMgr::Confirm() {
         case EntryEvent_Resume:
             m_result = 8;
             break;
+#if NEW_CHEATS
+        case EntryEvent_Give99Lives:
+            Grant99Lives();
+            break;
+#endif
         case EntryEvent_Back:
             GoBack();
             break;
@@ -6071,7 +6077,7 @@ void feCustomMenuMgr::DrawVersionOverlay() {
     g_textManager->SetShadow(false);
     g_textManager->SetOutline(true);
     g_textManager->SetColor(255, 255, 255);
-    g_textManager->PrintString(GAME_VERSION, HudX(kOverlayX), HudY(kOverlayY));
+    g_textManager->PrintString("3EChan " GAME_VERSION, HudX(kOverlayX), HudY(kOverlayY));
 
     if (g_autoUpdater && g_autoUpdater->IsUpdateAvailable()) {
         const char* text = Localize("FE_UPD_AVAIL");
