@@ -23,6 +23,15 @@ static TextRenderState ResolveLocalizedRenderState(
 
         if (arabicFont) {
             state.font = arabicFont;
+
+            // Give Arabic a heavier, wider display presence closer
+            // to the original English menu typography.
+            state.scaleX *= 1.08f;
+            state.scaleY *= 1.03f;
+
+            if (state.outline.enabled) {
+                state.outline.thickness *= 1.15f;
+            }
         }
     }
 #endif
@@ -73,7 +82,8 @@ void TextManager::Init() {
 
     if (windowsDir && windowsDir[0]) {
         static const char* kArabicFontFiles[] = {
-            "tahomabd.ttf",
+            "tradbdo.ttf",      // Traditional Arabic Bold - primary display font
+            "tahomabd.ttf",     // Strong fallback
             "arialbd.ttf",
             "segoeuib.ttf",
             "tahoma.ttf",

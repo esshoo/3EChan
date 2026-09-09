@@ -643,3 +643,56 @@ Nintendo Switch
 
 [0xC131692D]
 اضغط <ACT:OPEN_CLOSE_MENU> لفتح القائمة الرئيسية.
+
+#
+# Gameplay HUD
+#
+
+[FE_HIT_ONE]
+ضربة
+
+[FE_HIT_TWO]
+ضربتان
+
+[FE_HIT_MANY]
+ضربات
+
+#
+# Runtime player-facing localization
+#
+
+[FE_B_DANTE]
+دانتي
+
+[FE_B_CHEF]
+الشيف
+
+[FE_B_CLOWN]
+المهرج
+
+[FE_B_BARNEY]
+بارني
+
+[FE_B_DISCO]
+ديسكو
+
+[FE_B_GRONTAR]
+غرونتار
+
+[FE_B_PAUL]
+بول
+
+[FE_B_OSCAR]
+أوسكار
+
+[FE_B_BUTCH]
+بوتش
+
+[FE_UPD_ERRGEN]
+تعذر التحقق من التحديث. حاول مرة أخرى.
+
+[FE_ASSET_ERRGEN]
+فشل استخراج موارد اللعبة. تحقق من صورة القرص ثم حاول مرة أخرى.
+
+[FE_KEY_FMT]
+مفتاح %d

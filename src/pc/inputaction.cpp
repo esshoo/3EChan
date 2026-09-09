@@ -2,6 +2,9 @@
 #include "p3d/input.h"
 #include "pddi/pddidev.h"
 #include "gen/control.h"
+#if CUSTOM_TEXT
+#include "extra/customtext.h"
+#endif
 
 static const char* kActionTokens[ACTION_COUNT] = {
     "JUMP",
@@ -234,6 +237,21 @@ static void KeyToLabel(s32 key, char* outLabel, s32 outLabelLen) {
         case KEY_SLASH: CopyLabel(outLabel, outLabelLen, "/"); return;
         case KEY_GRAVE: CopyLabel(outLabel, outLabelLen, "`"); return;
         default:
+#if CUSTOM_TEXT
+            if (g_customText.GetLanguage() == LangArabic) {
+                const char* fmt =
+                    g_customText.GetString("FE_KEY_FMT");
+
+                if (fmt && fmt[0]) {
+                    snprintf(
+                        outLabel,
+                        outLabelLen,
+                        fmt,
+                        key);
+                    return;
+                }
+            }
+#endif
             snprintf(outLabel, outLabelLen, "Key%d", key);
             return;
     }

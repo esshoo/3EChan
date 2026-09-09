@@ -7,6 +7,9 @@
 #include "gen/scoremgr.h"
 #include "gen/game.h"
 #include "gen/world.h"
+#if CUSTOM_TEXT
+#include "extra/customtext.h"
+#endif
 #if CUSTOM_MENU
 #include "pc/inputaction.h"
 #endif
@@ -17,6 +20,28 @@
 static char s_dragonCountBuf[32];
 static const char s_hdHitSingular[] = "hit";
 static const char s_hdHitPlural[] = "hits";
+
+static const char* GetHdHitLabel(s32 count) {
+#if CUSTOM_TEXT
+    const char* token = "FE_HIT_MANY";
+
+    if (count == 1) {
+        token = "FE_HIT_ONE";
+    }
+    else if (count == 2) {
+        token = "FE_HIT_TWO";
+    }
+
+    const char* localized = g_customText.GetString(token);
+    if (localized && localized[0]) {
+        return localized;
+    }
+#endif
+
+    return (count == 1)
+        ? s_hdHitSingular
+        : s_hdHitPlural;
+}
 static s32 s_hdTallyFastForward = 0;
 
 static void ApplyHdHitsColor(xcTextPrim* textPrim, s16 colorR, s16 colorG, s16 colorB) {
@@ -434,7 +459,7 @@ void hdHits::IncrementHits() {
         overlay->visibility = 1;
     }
 
-    const char* suffix = (hitCount < 2) ? s_hdHitSingular : s_hdHitPlural;
+    const char* suffix = GetHdHitLabel(hitCount);
     snprintf(hitsBuf, sizeof(hitsBuf), "%2d %s", hitCount, suffix);
 
     colorR = 255;

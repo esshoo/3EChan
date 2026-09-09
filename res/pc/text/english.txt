@@ -640,3 +640,56 @@ Mirror World:
 
 [0xC131692D]
 Press <ACT:OPEN_CLOSE_MENU> to open the main menu.
+
+#
+# Gameplay HUD
+#
+
+[FE_HIT_ONE]
+hit
+
+[FE_HIT_TWO]
+hits
+
+[FE_HIT_MANY]
+hits
+
+#
+# Runtime player-facing localization
+#
+
+[FE_B_DANTE]
+Dante
+
+[FE_B_CHEF]
+Chef
+
+[FE_B_CLOWN]
+Clown
+
+[FE_B_BARNEY]
+Barney
+
+[FE_B_DISCO]
+Disco
+
+[FE_B_GRONTAR]
+Grontar
+
+[FE_B_PAUL]
+Paul
+
+[FE_B_OSCAR]
+Oscar
+
+[FE_B_BUTCH]
+Butch
+
+[FE_UPD_ERRGEN]
+Update check failed. Please try again.
+
+[FE_ASSET_ERRGEN]
+Asset extraction failed. Check the disc image and try again.
+
+[FE_KEY_FMT]
+Key%d

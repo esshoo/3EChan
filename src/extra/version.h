@@ -1,9 +1,9 @@
 #pragma once
 // Game title
 #define JCS_TITLE "ReChan"
-#define GAME_VERSION "v1.0.1"
-#define UPDATE_REPO_OWNER "SilverwireGames"
-#define UPDATE_REPO_NAME "ReChan"
+#define GAME_VERSION "v1.1.0"
+#define UPDATE_REPO_OWNER "esshoo"
+#define UPDATE_REPO_NAME "3EChan"
 
 #define LEGAL_TEXT R"(
 LEGAL NOTICE

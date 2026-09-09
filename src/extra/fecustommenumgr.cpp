@@ -3154,6 +3154,21 @@ bool feCustomMenuMgr::BuildUpdateInfoText(const char* token, char* outText, s32 
         return true;
     }
     if (!strcmp(token, "FE_UPD_ERR")) {
+        // Internal updater diagnostics are English developer strings.
+        // Do not inject them into the Arabic player-facing UI.
+        if (g_customText.GetLanguage() == LangArabic) {
+            const char* generic =
+                Localize("FE_UPD_ERRGEN");
+
+            snprintf(
+                outText,
+                outTextLen,
+                "%s",
+                generic ? generic : "");
+
+            return true;
+        }
+
         const char* fmt = Localize("FE_UPD_ERR");
         if (!fmt) fmt = "Update check failed: %s";
         snprintf(outText, outTextLen, fmt, g_autoUpdater->GetError());
@@ -6218,6 +6233,21 @@ bool feCustomMenuMgr::BuildAssetInfoText(const char* token, char* outText, s32 o
     }
 
     if (!strcmp(token, "FE_ASSET_ERR")) {
+        // Extraction exceptions contain technical English details.
+        // Keep those in logs, but use localized player-facing Arabic text.
+        if (g_customText.GetLanguage() == LangArabic) {
+            const char* generic =
+                Localize("FE_ASSET_ERRGEN");
+
+            snprintf(
+                outText,
+                outTextLen,
+                "%s",
+                generic ? generic : "");
+
+            return true;
+        }
+
         const char* fmt = Localize("FE_ASSET_ERR");
         if (!fmt) fmt = "Extraction failed: %s";
         snprintf(outText, outTextLen, fmt, g_psxDiscExtractor->GetError());

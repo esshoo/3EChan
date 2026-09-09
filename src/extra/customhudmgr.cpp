@@ -972,6 +972,72 @@ static const char* FindActiveBossName() {
     return nullptr;
 }
 
+static char LowerBossAscii(char c) {
+    if (c >= 'A' && c <= 'Z') {
+        return (char)(c - 'A' + 'a');
+    }
+    return c;
+}
+
+static bool BossNameEquals(const char* a, const char* b) {
+    if (!a || !b) {
+        return false;
+    }
+
+    while (*a && *b) {
+        if (LowerBossAscii(*a) != LowerBossAscii(*b)) {
+            return false;
+        }
+        a++;
+        b++;
+    }
+
+    return *a == 0 && *b == 0;
+}
+
+static const char* LocalizeBossDisplayName(const char* name) {
+    if (g_customText.GetLanguage() != LangArabic) {
+        return name;
+    }
+
+    struct BossLocalization {
+        const char* englishName;
+        const char* token;
+    };
+
+    static const BossLocalization kBossNames[] = {
+        { "Dante",   "FE_B_DANTE"   },
+        { "Chef",    "FE_B_CHEF"    },
+        { "Clown",   "FE_B_CLOWN"   },
+        { "Barney",  "FE_B_BARNEY"  },
+        { "Disco",   "FE_B_DISCO"   },
+        { "Grontar", "FE_B_GRONTAR" },
+        { "Paul",    "FE_B_PAUL"    },
+        { "Oscar",   "FE_B_OSCAR"   },
+        { "Butch",   "FE_B_BUTCH"   },
+    };
+
+    if (name && name[0]) {
+        for (const BossLocalization& entry : kBossNames) {
+            if (BossNameEquals(name, entry.englishName)) {
+                const char* localized =
+                    g_customText.GetString(entry.token);
+
+                if (localized && localized[0]) {
+                    return localized;
+                }
+            }
+        }
+    }
+
+    // Unknown runtime boss names must not leak English
+    // into the Arabic HUD.
+    const char* generic =
+        g_customText.GetString(kHudBossLabelToken);
+
+    return (generic && generic[0]) ? generic : "";
+}
+
 static void CopyUpperAscii(char* dst, s32 dstSize, const char* src) {
     if (!dst || dstSize <= 0) {
         return;
@@ -1380,7 +1446,7 @@ void CustomHudMgr::DrawAutosaveOverlay() const {
 
     if (g_game->IsAutosaveFailureVisible()) {
         const char* text = g_customText.GetString("FE_AUTO_FAIL");
-        if (!text) text = "Auto save failed.";
+        if (!text) text = "";
         if (BeginHudText(kHudBodyFontName, 0.30f, TextAlign_Right,
             255, 224, 160, 255, true, true)) {
             g_textManager->PrintString(text, HudX(DEFAULT_SCREEN_WIDTH - 14.0f), HudY(DEFAULT_SCREEN_HEIGHT - 24.0f));
@@ -1449,7 +1515,11 @@ void CustomHudMgr::DrawLevelZoneOverlay(const HUD& hud) {
 
     const char* zoneToken = GetSpecialLocationToken(world->GetCurLevelID());
     const char* zoneText = zoneToken ? g_customText.GetString(zoneToken) : nullptr;
-    if (!zoneText || !zoneText[0]) {
+
+    // Raw PSX level names are English. Keep them for the original
+    // languages, but never leak them into the Arabic HUD.
+    if ((!zoneText || !zoneText[0]) &&
+        g_customText.GetLanguage() != LangArabic) {
         zoneText = world->GetLevelNameFromIndex(levelIndex);
     }
 
@@ -1460,7 +1530,10 @@ void CustomHudMgr::DrawLevelZoneOverlay(const HUD& hud) {
     else {
         const char* zoneFallbackFormat = g_customText.GetString(kLevelZoneZoneFallbackToken);
         if (!zoneFallbackFormat || !zoneFallbackFormat[0]) {
-            zoneFallbackFormat = "Zone %d";
+            zoneFallbackFormat =
+                (g_customText.GetLanguage() == LangArabic)
+                    ? "%d"
+                    : "Zone %d";
         }
         std::snprintf(zoneLine, sizeof(zoneLine), zoneFallbackFormat, levelIndex + 1);
     }
@@ -1477,18 +1550,25 @@ void CustomHudMgr::DrawLevelZoneOverlay(const HUD& hud) {
         if (!bossName && HUD::szBossStatic[0] != 0) {
             bossName = HUD::szBossStatic;
         }
+
+        bossName = LocalizeBossDisplayName(bossName);
+
         if (!bossName || !bossName[0]) {
             bossName = g_customText.GetString(kHudBossLabelToken);
         }
         if (!bossName || !bossName[0]) {
-            bossName = "Boss";
+            bossName = "";
         }
+
         CopyUpperAscii(levelLine, (s32)sizeof(levelLine), bossName);
     }
     else {
         const char* levelFallbackFormat = g_customText.GetString(kLevelZoneLevelFallbackToken);
         if (!levelFallbackFormat || !levelFallbackFormat[0]) {
-            levelFallbackFormat = "Level %d";
+            levelFallbackFormat =
+                (g_customText.GetLanguage() == LangArabic)
+                    ? "%d"
+                    : "Level %d";
         }
         std::snprintf(levelLine, sizeof(levelLine), levelFallbackFormat, petalIndex + 1);
     }
@@ -1730,7 +1810,13 @@ void CustomHudMgr::DrawBossHealthCard(const HUD& hud) {
     if (!bossLabelText || bossLabelText[0] == 0) {
         bossLabelText = "";
     }
-    const char* name = (HUD::szBossStatic[0] != 0) ? HUD::szBossStatic : bossLabelText;
+    const char* rawName =
+        (HUD::szBossStatic[0] != 0)
+            ? HUD::szBossStatic
+            : bossLabelText;
+
+    const char* name =
+        LocalizeBossDisplayName(rawName);
 
     DrawOneEnemyHealthCard(hud.bossHealth,
                            hud.bossHandle->owner,
@@ -2085,12 +2171,42 @@ void CustomHudMgr::DrawDestinationBanner(const HUD& hud) const {
         }
     }
 
+    const char* localizedLocation = nullptr;
+
+    if (g_customText.GetLanguage() == LangArabic) {
+        const char* locationToken =
+            GetSpecialLocationToken(currentLevel);
+
+        localizedLocation =
+            locationToken
+                ? g_customText.GetString(locationToken)
+                : nullptr;
+    }
+
     char levelBuf[64];
-    if (levelName && levelName[0]) {
-        CopyUpperAscii(levelBuf, (s32)sizeof(levelBuf), levelName);
+
+    if (localizedLocation && localizedLocation[0]) {
+        CopyUpperAscii(
+            levelBuf,
+            (s32)sizeof(levelBuf),
+            localizedLocation);
+    }
+    else if (
+        g_customText.GetLanguage() != LangArabic &&
+        levelName &&
+        levelName[0]
+    ) {
+        CopyUpperAscii(
+            levelBuf,
+            (s32)sizeof(levelBuf),
+            levelName);
     }
     else {
-        std::snprintf(levelBuf, sizeof(levelBuf), destLevelFormatText, currentLevel);
+        std::snprintf(
+            levelBuf,
+            sizeof(levelBuf),
+            destLevelFormatText,
+            currentLevel);
     }
 
     if (BeginHudText(kHudBodyFontName, 0.20f, TextAlign_Center,
