@@ -145,7 +145,8 @@ public:
         }
 
         struct RangeDef { u32 first; s32 count; };
-        static const RangeDef kRanges[] = {
+
+        static const RangeDef kLatinRanges[] = {
             { 32, 95 },        // Basic Latin
             { 160, 96 },       // Latin-1 Supplement
             { 0x0100, 128 },   // Latin Extended-A
@@ -153,11 +154,28 @@ public:
             { 0x20AC, 1 },     // Euro sign
         };
 
+        static const RangeDef kArabicRanges[] = {
+            { 32, 95 },        // Basic Latin for numbers and mixed text
+            { 160, 96 },       // Latin-1 Supplement
+            { 0x0600, 256 },   // Arabic
+            { 0xFE70, 144 },   // Arabic Presentation Forms-B
+        };
+
+        const bool isArabicFont =
+            desc.name && std::strcmp(desc.name, "Arabic") == 0;
+
+        const RangeDef* ranges =
+            isArabicFont ? kArabicRanges : kLatinRanges;
+
+        const s32 rangeCount = isArabicFont
+            ? (s32)(sizeof(kArabicRanges) / sizeof(kArabicRanges[0]))
+            : (s32)(sizeof(kLatinRanges) / sizeof(kLatinRanges[0]));
+
         font.ranges.clear();
-        for (s32 i = 0; i < (s32)(sizeof(kRanges) / sizeof(kRanges[0])); i++) {
+        for (s32 i = 0; i < rangeCount; i++) {
             PackedRange range = {};
-            range.first = kRanges[i].first;
-            range.count = kRanges[i].count;
+            range.first = ranges[i].first;
+            range.count = ranges[i].count;
             range.chars.resize((size_t)range.count);
             font.ranges.push_back(range);
         }
