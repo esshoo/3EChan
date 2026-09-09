@@ -85,11 +85,7 @@ jobs:
               throw "vswhere.exe was not found."
           }
 
-          Write-Host "Installed Visual Studio instances:"
-
-          & $VsWhere `
-              -products * `
-              -format table
+          Write-Host "Visual Studio locator found: $VsWhere"
 
           $MSBuild = & $VsWhere `
               -latest `
