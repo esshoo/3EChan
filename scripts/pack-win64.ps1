@@ -18,10 +18,6 @@ $hash = (Get-FileHash $Exe -Algorithm SHA256).Hash.ToLower()
 
 Copy-Item $Exe (Join-Path $Stage "3EChan.exe")
 
-# v1.1.1 migration compatibility:
-# v1.1.0 updater still relaunches rechan.exe after extracting the update.
-# Remove this compatibility copy from a later release after migration.
-Copy-Item $Exe (Join-Path $Stage "rechan.exe")
 Copy-Item (Join-Path $ResDir "pc") (Join-Path $Stage "pc") -Recurse
 
 if (Test-Path $OutZip) { Remove-Item $OutZip }

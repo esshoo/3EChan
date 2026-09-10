@@ -924,7 +924,18 @@ bool Game::gsIntroState(Game* game) {
             g_feCustomMenuMgr->OpenPopup(PopupKind_CheckingUpdate, 1.0f, []() -> s32 {
                 if (!g_autoUpdater || !g_autoUpdater->IsCheckComplete())
                     return -1;
-                return (g_feCustomMenuMgr->GetCurrentPage() == MenuPage_None) ? (s32)GameResult::ResumePlay : 1;
+
+                if (
+                    g_autoUpdater->IsUpdateAvailable() &&
+                    g_feCustomMenuMgr->GetCurrentPage() == MenuPage_None
+                ) {
+                    g_feCustomMenuMgr->Activate(MenuPage_Update);
+                    return 1;
+                }
+
+                return (g_feCustomMenuMgr->GetCurrentPage() == MenuPage_None)
+                    ? (s32)GameResult::ResumePlay
+                    : 1;
             });
         }
 #endif

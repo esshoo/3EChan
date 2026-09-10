@@ -302,9 +302,34 @@ void AutoUpdater::InstallAndRelaunch() {
                   "powershell -Command \"Expand-Archive -Path '%s' -DestinationPath '%s' -Force\"\r\n",
                   m_tempArchivePath.c_str(), exeDir.c_str());
     script += lineBuf;
-    // v1.1.1 migration: remove the legacy executable on the next update.
-    std::snprintf(lineBuf, sizeof(lineBuf), "del /f /q \"%s\\rechan.exe\" > nul 2>&1\r\n", exeDir.c_str());
-    script += lineBuf;
+    // Remove whatever executable name launched the old build after extraction,
+    // unless it is already the official 3EChan.exe name.
+    std::string currentExeName = m_exePath;
+    const size_t lastSlash = currentExeName.find_last_of("/\\");
+    if (lastSlash != std::string::npos) {
+        currentExeName.erase(0, lastSlash + 1);
+    }
+
+    std::string currentExeNameLower = currentExeName;
+    std::string officialExeNameLower = exeName;
+
+    for (char& c : currentExeNameLower) {
+        c = (char)tolower((unsigned char)c);
+    }
+    for (char& c : officialExeNameLower) {
+        c = (char)tolower((unsigned char)c);
+    }
+
+    const bool runningOfficialExe =
+        currentExeNameLower == officialExeNameLower;
+
+    if (!runningOfficialExe) {
+        std::snprintf(
+            lineBuf, sizeof(lineBuf),
+            "del /f /q \"%s\" > nul 2>&1\r\n",
+            m_exePath.c_str());
+        script += lineBuf;
+    }
     std::snprintf(lineBuf, sizeof(lineBuf), "del \"%s\"\r\n", m_tempArchivePath.c_str());
     script += lineBuf;
     std::snprintf(lineBuf, sizeof(lineBuf), "start \"\" \"%s\\%s\"\r\n", exeDir.c_str(), exeName.c_str());

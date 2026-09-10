@@ -80,13 +80,12 @@ void TextManager::Init() {
     const char* windowsDir = std::getenv("WINDIR");
     bool arabicFontLoaded = false;
 
-    // Prefer the bundled 3EChan Arabic font when present.
-    // If it is missing or cannot be loaded, keep the existing Windows
-    // font fallback chain unchanged.
+    // Prefer the bundled 3EChan Arabic font.
+    // LoadFont fails safely when the file is unavailable, allowing
+    // the existing Windows Arabic font chain below to take over.
     static constexpr const char* kBundledArabicFont = "pc/fonts/3EChan.ttf";
-    const std::string bundledArabicFontPath = p3d::io::ResolvePath(kBundledArabicFont);
 
-    if (p3d::io::FileExists(bundledArabicFontPath)) {
+    {
         TextFontDesc arabicDesc = {};
         arabicDesc.name = "Arabic";
         arabicDesc.path = kBundledArabicFont;
