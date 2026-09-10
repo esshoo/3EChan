@@ -13,6 +13,8 @@
 
 #include "p3d/p3dmath.h"
 
+#include "pc/inputaction.h"
+
 #include <algorithm>
 #include <cmath>
 #include <unordered_map>
@@ -104,7 +106,13 @@ float MovementMultiplierFor(const Humanoid& humanoid) {
 
     if (ThreeChanCombat::IsRegularEnemy(&humanoid)
         && settings.enemies.enabled) {
-        return settings.enemies.runningSpeedMultiplier;
+        const bool wantsStrafe =
+            (static_cast<u32>(humanoid.commandBits)
+                & (1u << GA_STRAFE)) != 0;
+
+        return wantsStrafe
+            ? settings.enemies.strafingSpeedMultiplier
+            : settings.enemies.runningSpeedMultiplier;
     }
 
     return 1.0f;
@@ -447,8 +455,7 @@ void ApplyPostControl(
             // runningSpeed or strafingSpeed. The dedicated Behaviour
             // decisions still remain intact.
             multiplier =
-                settings.enemies
-                    .runningSpeedMultiplier;
+                MovementMultiplierFor(humanoid);
         }
     }
 
