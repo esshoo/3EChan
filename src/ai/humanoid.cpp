@@ -38,6 +38,7 @@
 #endif
 
 #include "extra/shadowcsm.h"
+#include "extra/threechan_combat.h"
 
 static constexpr s32 HUMANOID_ANIM_RUN = 2;
 static constexpr s32 HUMANOID_ANIM_DIVE_ROLL = 90;
@@ -1209,6 +1210,7 @@ Humanoid::Humanoid(const LVector* initialPos, u16 type)
 // PSX: _._8Humanoid (HUMANOID.CPP:490)
 Humanoid::~Humanoid() {
     MARKFUNCTION(0x80062C58);
+    ThreeChanCombat::ForgetHumanoid(this);
 #if HIGH_FPS_PLAY_PRESENTATION
     ClearHumanoidRenderSmoothState(this);
 #endif
@@ -1236,6 +1238,7 @@ Humanoid::~Humanoid() {
 // PSX: Think__8Humanoid (HUMANOID.CPP:1133)
 void Humanoid::Think() {
     MARKFUNCTION(0x80063808);
+    ThreeChanCombat::SyncHumanoid(*this);
 
     const bool directorInputLocked =
         g_director && g_director->scriptState != 0 && g_director->enableInput == 0;
@@ -1333,6 +1336,7 @@ void Humanoid::Think() {
 
     // PSX step 7: process AI behaviour
     ProcessControl();
+    ThreeChanCombat::ApplyPostControl(*this);
 
     // PSX step 8: delta time computation (fixed-point 16.16 multiply)
     // result = (moveSpeed * deltaTime) >> 16
@@ -1345,6 +1349,7 @@ void Humanoid::Think() {
     // (requires FightingCollision system, simplified for now)
 
     ProcessAction();
+    ThreeChanCombat::ApplyAnimationTuning(*this);
 
     Move();
 
@@ -2237,6 +2242,8 @@ void Humanoid::HandleCollision(Thing* other, s32 damage, ...) {
                 g_hud->SetFoe(this);
             }
         }
+
+        appliedDamage = ThreeChanCombat::ResolveIncomingDamage(this, other, appliedDamage);
 
         if (appliedDamage > 0) {
             u32 clampedDamage = static_cast<u32>(appliedDamage);
