@@ -22,6 +22,7 @@
 #include "extra/cheats.h"
 #include "extra/threechan_combat.h"
 #include "extra/threechan_group_combat.h"
+#include "extra/threechan_boss.h"
 #include "p3d/p3dmath.h"
 #include "pc/log.h"
 
@@ -483,24 +484,24 @@ void Behaviour::ButchDMS(Behaviour* self) {
     }
 
     owner->FaceThingDesired(player);
-    if (distanceToPlayer < BUTCH_ATTACK_DIST) {
+    if (distanceToPlayer < ThreeChanBoss::ResolveButchAttackDistance(BUTCH_ATTACK_DIST)) {
         self->navDecisionCounter = 0;
         self->ComplexAttack();
         return;
     }
 
     self->navDecisionCounter++;
-    if (self->navDecisionCounter >= 26) {
+    if (self->navDecisionCounter >= ThreeChanBoss::ResolveDecisionFrames(26)) {
         self->navDecisionCounter = 0;
 
         if (BUTCH_FAR_DIST < distanceToPlayer) {
             const s32 randomAction = (s32)rmRangedRandom(100);
-            if (randomAction < 30) {
+            if (ThreeChanBoss::ShouldButchStompRoll(randomAction)) {
                 owner->RequestAction(30);
                 return;
             }
 
-            if ((u32)(randomAction - 30) < 30u) {
+            if (ThreeChanBoss::ShouldButchChargeRoll(randomAction)) {
                 s32 canCharge = 0;
                 if (IsPointInFieldOf(player->pos, ownerPos, ownerFacing, 0xAAA, 0xAAA) != 0) {
                     s32 collisionRatio = 0;
@@ -698,7 +699,7 @@ void Behaviour::ButchDMS_Charge(Behaviour* self) {
     owner->SetTarget(player);
 
     self->navDecisionCounter++;
-    if (self->navDecisionCounter >= 51) {
+    if (self->navDecisionCounter >= ThreeChanBoss::ResolveDecisionFrames(51)) {
         if (IsPointInFieldOf(playerPos, ownerPos, ownerFacing, 0xAAA, 0xAAA) == 0) {
             self->navDecisionCounter = 0;
             self->handlerThisOffset = 0;
@@ -731,7 +732,7 @@ void Behaviour::ButchDMS_Charge(Behaviour* self) {
         return;
     }
 
-    if (distanceToPlayer < BUTCH_ATTACK_DIST) {
+    if (distanceToPlayer < ThreeChanBoss::ResolveButchAttackDistance(BUTCH_ATTACK_DIST)) {
         owner->RequestAction(7);
         self->navDecisionCounter = 0;
         self->handlerThisOffset = 0;
@@ -776,7 +777,7 @@ void Behaviour::GrontarDMS(Behaviour* self) {
         comboStateB = 0;
     };
 
-    if (!self->InActiveZone() && distanceToPlayer >= GRONTAR_FAR_ATTACK_DIST) {
+    if (!self->InActiveZone() && distanceToPlayer >= ThreeChanBoss::ResolveGrontarFarRange(GRONTAR_FAR_ATTACK_DIST)) {
         LVector zoneCenter = {};
         owner->activeZone->GetActiveZoneCenterPoint(zoneCenter);
         owner->SetTarget(player);
@@ -794,7 +795,7 @@ void Behaviour::GrontarDMS(Behaviour* self) {
         return;
     }
 
-    if (distanceToPlayer < GRONTAR_CLOSE_ATTACK_DIST) {
+    if (distanceToPlayer < ThreeChanBoss::ResolveGrontarCloseRange(GRONTAR_CLOSE_ATTACK_DIST)) {
         const s32 playerInField = IsPointInFieldOf(player->pos, owner->pos, owner->orientation.y, 0x2AAA, 0x2AAA);
         const s32 randomAction = (s32)rmRangedRandom(100);
         if (playerInField != 0 && randomAction < 75) {
@@ -808,7 +809,7 @@ void Behaviour::GrontarDMS(Behaviour* self) {
         return;
     }
 
-    if (distanceToPlayer < GRONTAR_FAR_ATTACK_DIST) {
+    if (distanceToPlayer < ThreeChanBoss::ResolveGrontarFarRange(GRONTAR_FAR_ATTACK_DIST)) {
         if (player->actionState == (s32)AS_STRAFE) {
             owner->RequestAction(7);
             resetComboState();
@@ -943,7 +944,7 @@ void Behaviour::PaulDMS(Behaviour* self) {
     spotPos.y = owner->pos.y;
 
     if (owner->DistanceFromPoint(spotPos) < PAUL_SPOTLIGHT_RADIUS) {
-        shouldDance = (distanceToPlayer > PAUL_CLOSE_ATTACK_DIST) ? 1 : 0;
+        shouldDance = (distanceToPlayer > ThreeChanBoss::ResolvePaulCloseRange(PAUL_CLOSE_ATTACK_DIST)) ? 1 : 0;
     }
 
     s32& spotPathWasForcedOff = self->field80To176[3]; // +0x5C
@@ -964,7 +965,7 @@ void Behaviour::PaulDMS(Behaviour* self) {
         if (danceActive == 0 && spotRecoverTimer == 0) {
             bossSpotLight->EnablePath(0);
             danceActive = 1;
-            danceTimer = PAUL_DANCE_TIME;
+            danceTimer = ThreeChanBoss::ResolvePaulDanceFrames(PAUL_DANCE_TIME);
         }
     }
 
@@ -1000,7 +1001,7 @@ void Behaviour::PaulDMS(Behaviour* self) {
 
         bossSpotLight->EnablePath(1);
         danceActive = 0;
-        spotRecoverTimer = PAUL_RECOVER_TIME;
+        spotRecoverTimer = ThreeChanBoss::ResolvePaulRecoveryFrames(PAUL_RECOVER_TIME);
         return;
     }
 
@@ -1039,7 +1040,7 @@ void Behaviour::PaulDMS(Behaviour* self) {
         return;
     }
 
-    if (distanceToPlayer > PAUL_CLOSE_ATTACK_DIST) {
+    if (distanceToPlayer > ThreeChanBoss::ResolvePaulCloseRange(PAUL_CLOSE_ATTACK_DIST)) {
         if (playerDiveRolling != 0 && ownerInPlayerField != 0) {
             owner->RequestAction(9);
             return;
@@ -1056,7 +1057,7 @@ void Behaviour::PaulDMS(Behaviour* self) {
     }
 
     if (player->field484 != 0 && ownerInCombatState == 0) {
-        if ((s32)rmRangedRandom(100) < 75) {
+        if ((s32)rmRangedRandom(100) < ThreeChanBoss::ResolvePaulBackoffChance(75)) {
             if (!IsPlayerAggressiveCombatState(owner->actionState)) {
                 s32 collisionRatio = 0;
                 LVector wallNormal = {};
@@ -1112,7 +1113,7 @@ void Behaviour::PaulDMS(Behaviour* self) {
         return;
     }
 
-    if ((s32)rmRangedRandom(100) < 15) {
+    if ((s32)rmRangedRandom(100) < ThreeChanBoss::ResolvePaulAttackChance(15)) {
         owner->RequestAction(0x0E);
         return;
     }
@@ -1203,8 +1204,8 @@ void Behaviour::OscarDMS(Behaviour* self) {
             // PSX (0x8001E294-0x8001E330): both field-of-view probes use
             // ownerFacing, not sideFacing. sideFacing is only used by the
             // navDecision probe below.
-            if (IsPointInFieldOf(henchmanPos, ownerPos, ownerFacing, 0x38E, 0x38E)
-                && IsPointInFieldOf(player->pos, ownerPos, ownerFacing, 0x38E, 0x38E)
+            if (IsPointInFieldOf(henchmanPos, ownerPos, ownerFacing, ThreeChanBoss::ResolveOscarCoordinationAngle(0x38E), ThreeChanBoss::ResolveOscarCoordinationAngle(0x38E))
+                && IsPointInFieldOf(player->pos, ownerPos, ownerFacing, ThreeChanBoss::ResolveOscarCoordinationAngle(0x38E), ThreeChanBoss::ResolveOscarCoordinationAngle(0x38E))
                 && distanceToPlayer < distanceToHenchman) {
                 henchmanSupportFlag = 1;
             }
@@ -1219,7 +1220,7 @@ void Behaviour::OscarDMS(Behaviour* self) {
     }
 
     if (player->actionState == (s32)AS_BACK_GRAB_RECEIVE) {
-        if (distanceToPlayer <= OSCAR_CLOSE_DIST) {
+        if (distanceToPlayer <= ThreeChanBoss::ResolveOscarCloseRange(OSCAR_CLOSE_DIST)) {
             self->ComplexAttack();
             return;
         }
@@ -1260,7 +1261,7 @@ void Behaviour::OscarDMS(Behaviour* self) {
     // relentless chase, while a backed-up Oscar gets the circling/retreat
     // tree below.
     if (playerFacingFlag != 0 || targetingBossFlag != 0 || OscarsHenchman == nullptr) {
-        if (distanceToPlayer <= OSCAR_CLOSE_DIST) {
+        if (distanceToPlayer <= ThreeChanBoss::ResolveOscarCloseRange(OSCAR_CLOSE_DIST)) {
             owner->RequestAction(8);
             return;
         }
@@ -1291,12 +1292,12 @@ void Behaviour::OscarDMS(Behaviour* self) {
         return;
     }
 
-    if (distanceToPlayer <= OSCAR_CLOSE_DIST) {
+    if (distanceToPlayer <= ThreeChanBoss::ResolveOscarCloseRange(OSCAR_CLOSE_DIST)) {
         self->ComplexAttack();
         return;
     }
 
-    if (distanceToPlayer <= OSCAR_MID_DIST) {
+    if (distanceToPlayer <= ThreeChanBoss::ResolveOscarMidRange(OSCAR_MID_DIST)) {
         owner->moveSpeed = GetFaceAngleDataBackAngle(self);
         owner->SetDesiredMoveDirection(owner->faceAngle + 0x8000);
         owner->SetTarget(player);
@@ -1429,7 +1430,7 @@ void Behaviour::OscarHenchmanDMS(Behaviour* self) {
     const s32 ownerFacing = owner->orientation.y;
     const s32 ownerToPlayerFacing = PsxClipAngle360(ownerFacing - player->orientation.y);
     const s32 forwardPressure = ((u32)(ownerToPlayerFacing - OSCAR_HENCH_ANGLE_WINDOW_START)
-                                 <= (u32)OSCAR_HENCH_ANGLE_WINDOW_RANGE)
+                                 <= (u32)ThreeChanBoss::ResolveOscarHenchmanWindow(OSCAR_HENCH_ANGLE_WINDOW_RANGE))
         ? 1
         : 0;
 
@@ -1447,13 +1448,13 @@ void Behaviour::OscarHenchmanDMS(Behaviour* self) {
         return;
     }
 
-    if (OscarHenchmanSyncCounter < OSCAR_HENCH_SYNC_COUNTER_MAX) {
+    if (OscarHenchmanSyncCounter < ThreeChanBoss::ResolveOscarSyncDelay(OSCAR_HENCH_SYNC_COUNTER_MAX)) {
         OscarHenchmanSyncCounter++;
         return;
     }
 
     if (forwardPressure != 0) {
-        if (distanceToPlayer <= OSCAR_CLOSE_DIST) {
+        if (distanceToPlayer <= ThreeChanBoss::ResolveOscarCloseRange(OSCAR_CLOSE_DIST)) {
             if (bossOscar && bossOscar->actionState == (s32)AS_COMBAT_IDLE) {
                 owner->RequestAction(1);
             }
@@ -1489,12 +1490,12 @@ void Behaviour::OscarHenchmanDMS(Behaviour* self) {
         return;
     }
 
-    if (distanceToPlayer <= OSCAR_CLOSE_DIST) {
+    if (distanceToPlayer <= ThreeChanBoss::ResolveOscarCloseRange(OSCAR_CLOSE_DIST)) {
         self->ComplexAttack();
         return;
     }
 
-    if (distanceToPlayer <= OSCAR_MID_DIST) {
+    if (distanceToPlayer <= ThreeChanBoss::ResolveOscarMidRange(OSCAR_MID_DIST)) {
         owner->moveSpeed = GetFaceAngleDataBackAngle(self);
         owner->SetDesiredMoveDirection(owner->faceAngle + 0x8000);
         owner->RequestAction(6);
@@ -1579,7 +1580,7 @@ void Behaviour::DanteDMS_Phase1(Behaviour* self) {
         self->comboScriptCursor = 0;
     }
 
-    if (ShouldAdvanceDantePhase(owner, DANTE_PHASE1_HEALTH_SCALE)) {
+    if (ShouldAdvanceDantePhase(owner, ThreeChanBoss::ResolveDantePhaseThreshold(DANTE_PHASE1_HEALTH_SCALE, 2))) {
         self->handlerThisOffset = 0;
         self->handlerDispatch = -1;
         self->handler = DanteDMS_Phase2;
@@ -1691,7 +1692,7 @@ void Behaviour::DanteDMS_Phase2(Behaviour* self) {
         self->comboScriptCursor = 0;
     }
 
-    if (ShouldAdvanceDantePhase(owner, DANTE_PHASE2_HEALTH_SCALE)) {
+    if (ShouldAdvanceDantePhase(owner, ThreeChanBoss::ResolveDantePhaseThreshold(DANTE_PHASE2_HEALTH_SCALE, 3))) {
         self->handlerThisOffset = 0;
         self->handlerDispatch = -1;
         self->handler = DanteDMS_Phase3;

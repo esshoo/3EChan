@@ -4,6 +4,7 @@
 #include "extra/threechan_camera.h"
 #include "extra/threechan_group_combat.h"
 #include "extra/threechan_spawning.h"
+#include "extra/threechan_boss.h"
 #include "imgui.h"
 
 #include <cstdio>
@@ -285,6 +286,11 @@ void DrawBossesTab(ThreeChanSettings& settings) {
     Multiplier("Boss Decision Speed", bosses.global.decisionSpeedMultiplier);
     Multiplier("Boss Attack Speed", bosses.global.attackSpeedMultiplier);
     Multiplier("Boss Recovery Speed", bosses.global.recoverySpeedMultiplier);
+    ImGui::TextDisabled(
+        "Rate/Speed > 1 = faster. Time/Delay > 1 = longer.");
+
+    ImGui::TextDisabled(
+        "Boss Decision Speed applies to stock AI paths with explicit decision counters.");
 
     ImGui::SeparatorText("Per-Boss Advanced Tuning");
 
@@ -293,7 +299,8 @@ void DrawBossesTab(ThreeChanSettings& settings) {
         Multiplier("Attack Distance##Butch", bosses.butch.attackDistanceMultiplier);
         Multiplier("Stomp Frequency##Butch", bosses.butch.stompFrequencyMultiplier);
         Multiplier("Charge Pressure##Butch", bosses.butch.chargePressureMultiplier);
-        Multiplier("Pot Frequency##Butch", bosses.butch.potFrequencyMultiplier);
+        ImGui::TextDisabled(
+            "Pot Frequency: reserved - stock pot behaviour is pickup-availability driven.");
     }
 
     if (ImGui::CollapsingHeader("Grontar")) {
@@ -319,9 +326,9 @@ void DrawBossesTab(ThreeChanSettings& settings) {
 
         Multiplier("Missile Damage##Dante", bosses.dante.missileDamageMultiplier);
         Multiplier("Missile Radius##Dante", bosses.dante.missileRadiusMultiplier);
-        Multiplier("Missile Frequency##Dante", bosses.dante.missileFrequencyMultiplier);
-        Multiplier("Missile Recovery##Dante", bosses.dante.missileRecoveryMultiplier);
-        Multiplier("Target Missile Timing##Dante", bosses.dante.targetedMissileTimingMultiplier);
+        Multiplier("Missile Volley Rate##Dante", bosses.dante.missileFrequencyMultiplier);
+        Multiplier("Missile Recovery Time##Dante", bosses.dante.missileRecoveryMultiplier);
+        Multiplier("Target Missile Trigger Time##Dante", bosses.dante.targetedMissileTimingMultiplier);
     }
 
     DrawBossMultiplierSet(
@@ -340,7 +347,8 @@ void DrawBossesTab(ThreeChanSettings& settings) {
         Multiplier("Mid Range##Oscar", bosses.oscar.midRangeMultiplier);
         Multiplier("Henchman Coordination##Oscar", bosses.oscar.henchmanCoordinationMultiplier);
         Multiplier("Henchman Sync Delay##Oscar", bosses.oscar.henchmanSyncDelayMultiplier);
-        Multiplier("Aggression##Oscar", bosses.oscar.aggressionMultiplier);
+        ImGui::TextDisabled(
+            "Aggression: reserved - audited Oscar pressure path is deterministic.");
     }
 }
 

@@ -16,6 +16,7 @@
 #include "p3d/p3dmath.h"
 #include "pc/log.h"
 #include "snd/snddrct.h"
+#include "extra/threechan_boss.h"
 
 struct PsxFightingMoveRaw {
     u32 address;
@@ -228,7 +229,7 @@ void Boss::_Collapse() {
     }
 
     ++stateTimer;
-    if ((s16)humanoidDataID >= (s16)stateTimer) {
+    if (ThreeChanBoss::ResolveRecoveryFrames((s32)(s16)humanoidDataID) >= stateTimer) {
         return;
     }
 
@@ -402,7 +403,7 @@ void Butch::_Stomp() {
     const s32 floorHeight = g_collisionSectors[0].GetWorldFloorHeight(playerPos, 1);
     if (playerPos.y - floorHeight < 0x81) {
         player->SetActionState(AS_COLLAPSE_STUN, 0);
-        player->SubtractHitPoints(0x1C);
+        player->SubtractHitPoints(ThreeChanBoss::ResolveButchStompDamage(0x1C));
         Shock(SHOCK_16);
     }
 }
@@ -629,7 +630,13 @@ void Grontar::_DiveRoll() {
         return;
     }
 
-    SetHumanoidTarget(FindFoe(GRONTAR_DIVE_ROLL_FIGHT_DISTANCE, GRONTAR_DIVE_ROLL_FIGHT_HALF_ANGLE, 0));
+    SetHumanoidTarget(
+        FindFoe(
+            ThreeChanBoss::ResolveGrontarDiveRollRange(
+                GRONTAR_DIVE_ROLL_FIGHT_DISTANCE),
+            ThreeChanBoss::ResolveGrontarDiveRollAngle(
+                GRONTAR_DIVE_ROLL_FIGHT_HALF_ANGLE),
+            0));
     SetCurrentFightingNode();
 }
 
@@ -667,7 +674,7 @@ Humanoid* Grontar::FindFoe(u32 range, s32 param, s32 immediate) {
     s32 halfAngle = param;
 
     if (((static_cast<u32>(commandBits) >> 7) & 1u) != 0) {
-        searchRange = GrontarThrowDistance;
+        searchRange = ThreeChanBoss::ResolveGrontarThrowRange(GrontarThrowDistance);
         halfAngle = GrontarThrowHalfAngle;
     }
 
@@ -679,20 +686,20 @@ s32 Grontar::GetTargetingFrame(const PsxFightingMoveRaw* move) const {
     MARKFUNCTION(0x8001B5A0);
 
     if (!move) {
-        return GRONTAR_TARGET_TRACK_DEFAULT;
+        return ThreeChanBoss::ResolveGrontarTrackingFrames(GRONTAR_TARGET_TRACK_DEFAULT);
     }
 
     switch (move->anim) {
     case 25:
     case 26:
-        return GRONTAR_TARGET_TRACK_HORIZONTAL_SWING;
+        return ThreeChanBoss::ResolveGrontarTrackingFrames(GRONTAR_TARGET_TRACK_HORIZONTAL_SWING);
     case 63:
-        return GRONTAR_TARGET_TRACK_OVERHEAD_SWING;
+        return ThreeChanBoss::ResolveGrontarTrackingFrames(GRONTAR_TARGET_TRACK_OVERHEAD_SWING);
     case 54:
     case 58:
         return 0;
     default:
-        return GRONTAR_TARGET_TRACK_DEFAULT;
+        return ThreeChanBoss::ResolveGrontarTrackingFrames(GRONTAR_TARGET_TRACK_DEFAULT);
     }
 }
 
@@ -948,7 +955,12 @@ void Dante::_MissileAttack() {
     }
 
     const s32 currentFrame = static_cast<s16>((u32)anim->currentFrame >> 16);
-    if (currentFrame < s_danteMissileAttackFrameThreshold) {
+
+    const s32 threeChanMissileFrameThreshold =
+        ThreeChanBoss::ResolveDanteVolleyFrameThreshold(
+            s_danteMissileAttackFrameThreshold);
+
+    if (currentFrame < threeChanMissileFrameThreshold) {
         return;
     }
 
@@ -1031,7 +1043,7 @@ void Dante::_MissileAttack() {
         if (player != nullptr) {
             const s32 distance = player->DistanceFromPoint(pathPos);
             if (!IsDanteMissileImmuneActionState(player->actionState)
-                && distance < DANTE_MISSILE_DAMAGE_RADIUS) {
+                && distance < ThreeChanBoss::ResolveDanteMissileRadius(DANTE_MISSILE_DAMAGE_RADIUS)) {
                 shouldHitPlayer = true;
             }
         }
@@ -1042,7 +1054,7 @@ void Dante::_MissileAttack() {
     Player* player = Player::s_player;
     if (shouldHitPlayer && player != nullptr) {
         player->SetActionState(AS_COLLAPSE_STUN, 0);
-        player->SubtractHitPoints(DANTE_MISSILE_DAMAGE);
+        player->SubtractHitPoints(ThreeChanBoss::ResolveDanteMissileDamage(DANTE_MISSILE_DAMAGE));
         Shock(SHOCK_17);
     }
 
@@ -1071,7 +1083,7 @@ void Dante::_TargetMissileAttack() {
     }
 
     if (missileRecoveryCounter != 0) {
-        if (missileRecoveryCounter < DANTE_RECOVERY_TIME) {
+        if (missileRecoveryCounter < ThreeChanBoss::ResolveDanteMissileRecoveryFrames(DANTE_RECOVERY_TIME)) {
             missileRecoveryCounter += 1;
             return;
         }
@@ -1095,7 +1107,12 @@ void Dante::_TargetMissileAttack() {
     }
 
     const s32 currentFrame = static_cast<s16>((u32)anim->currentFrame >> 16);
-    if (currentFrame < s_danteTargetMissileFrameThreshold) {
+
+    const s32 threeChanTargetMissileFrameThreshold =
+        ThreeChanBoss::ResolveDanteTargetMissileFrameThreshold(
+            s_danteTargetMissileFrameThreshold);
+
+    if (currentFrame < threeChanTargetMissileFrameThreshold) {
         return;
     }
 
@@ -1131,9 +1148,9 @@ void Dante::_TargetMissileAttack() {
     GEffect_Create(DANTE_TARGET_MISSILE_EFFECT_HASH, &targetMissilePos, nullptr, nullptr, 0, 2, 0);
 
     Player* player = Player::s_player;
-    if (player && player->DistanceFromPoint(targetMissilePos) < DANTE_MISSILE_DAMAGE_RADIUS) {
+    if (player && player->DistanceFromPoint(targetMissilePos) < ThreeChanBoss::ResolveDanteMissileRadius(DANTE_MISSILE_DAMAGE_RADIUS)) {
         player->SetActionState(AS_COLLAPSE_STUN, 0);
-        player->SubtractHitPoints(DANTE_MISSILE_DAMAGE);
+        player->SubtractHitPoints(ThreeChanBoss::ResolveDanteMissileDamage(DANTE_MISSILE_DAMAGE));
     }
 
     targetMissilePrimed = 0;

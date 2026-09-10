@@ -161,6 +161,17 @@ bool IsAttackAnimationState(s32 state) {
         case AS_COUNTER_ATTACK:
         case AS_COUNTER_ATTACK_RECOVERY:
         case AS_THROW_PICKUP:
+
+        // Butch maps the generic environment/explosion states to its
+        // custom Charge/Stomp handlers. State 76 is Butch Throw Pot.
+        case AS_HIT_EXPLOSION:
+        case AS_HIT_ENVIRONMENT:
+        case 76:
+
+        // Dante custom missile states.
+        case AS_MISSILE_PREPARE:
+        case AS_MISSILE_ATTACK:
+        case AS_TARGET_MISSILE_ATTACK:
             return true;
 
         default:
