@@ -1,4 +1,4 @@
-﻿#include "gen/common.h"
+#include "gen/common.h"
 #include "pc/debugui.h"
 #include "imgui.h"
 #include <algorithm>
@@ -40,6 +40,7 @@
 #include "p3d/context.h"
 #include "extra/shadowcsm.h"
 #include "snd/snddrct.h"
+#include "pc/threechan_ui.h"
 
 static bool sEnabled = false;
 static bool sShowPlayer = false;
@@ -47,6 +48,7 @@ static bool sShowCamera = false;
 static bool sShowAudio = false;
 static bool sShowAnimation = false;
 static bool sShowGame = false;
+static bool sShowThreeChan = false;
 static bool sShowParticles = false;
 static bool sShowDebugging = false;
 static bool sShowEffects = false;
@@ -1544,6 +1546,7 @@ void DebugUI::Draw() {
     if (ImGui::BeginMainMenuBar()) {
         if (ImGui::BeginMenu("Windows")) {
             ImGui::MenuItem("Game", nullptr, &sShowGame);
+            ImGui::MenuItem("3EChan", nullptr, &sShowThreeChan);
             ImGui::MenuItem("Player", nullptr, &sShowPlayer);
             ImGui::MenuItem("Particles", nullptr, &sShowParticles);
             ImGui::MenuItem("Effects", nullptr, &sShowEffects);
@@ -1571,6 +1574,10 @@ void DebugUI::Draw() {
             ImGui::EndMenu();
         }
         ImGui::EndMainMenuBar();
+    }
+
+    if (sShowThreeChan) {
+        ThreeChanUI::Draw(&sShowThreeChan);
     }
 
     if (sShowGame && g_game) {
