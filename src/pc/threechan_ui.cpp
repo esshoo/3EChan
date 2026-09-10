@@ -1,6 +1,7 @@
 #include "pc/threechan_ui.h"
 
 #include "extra/threechan_tuning.h"
+#include "extra/threechan_camera.h"
 #include "imgui.h"
 
 #include <cstdio>
@@ -302,6 +303,10 @@ void DrawCameraTab(ThreeChanSettings& settings) {
     auto& c = settings.camera;
 
     ImGui::Checkbox("Enable 3EChan Camera Override", &c.enabled);
+
+    ImGui::TextDisabled(
+        "Runtime: %s",
+        ThreeChanCamera::GetRuntimeStatus());
 
     static const char* cameraModes[] = {
         "Follow (Original)",

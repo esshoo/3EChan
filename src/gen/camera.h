@@ -93,6 +93,18 @@ public:
         prevPosition = { x, y, z };
     }
 
+    // PC-only interface for the optional 3EChan camera controller.
+    // Original PSX CameraMode IDs/layout remain unchanged.
+    bool ThreeChanComputeFollowSolverPose(
+        LVector& outEye,
+        LVector& outTarget,
+        s32& outFov);
+
+    void ThreeChanApplyExternalPose(
+        const LVector& eye,
+        const LVector& target,
+        s32 fov,
+        bool snapPresentation);
 private:
     // Mode dispatch functions
     void DebugCam();                           // 0x80048718 = mode 0

@@ -20,6 +20,7 @@
 #include "gen/display.h"
 #include "gen/director.h"
 #include "pc/log.h"
+#include "extra/threechan_camera.h"
 
 // PSX math helpers
 
@@ -124,6 +125,7 @@ Camera::~Camera() {
 
 void Camera::Reset() {
     MARKFUNCTION(0x80047C5C);
+    ThreeChanCamera::ResetRuntime();
 
     // Reset position and velocity
     position = {};
@@ -368,6 +370,15 @@ void Camera::UpdateHighFPS() {
 void Camera::Think() {
     MARKFUNCTION(0x80047F28);
 
+    // Experimental 3EChan modes own the gameplay camera pose.
+    // Original Follow/Rigid continue through the original camera path.
+    if (ThreeChanCamera::HandleGameplayCamera(*this)) {
+        if (shakeFrames > 0) {
+            CameraShake();
+        }
+        return;
+    }
+
     if (cameraAnim == nullptr) {
         bool skipModeFunc = false;
 #if IMPROVED_DEBUG_CAM && HIGH_FPS_PLAY_PRESENTATION
@@ -604,6 +615,82 @@ void Camera::LookAtTarget(const LVector* target) {
 }
 
 
+
+// -----------------------------------------------------------------------------
+// 3EChan PC-only camera bridge
+// -----------------------------------------------------------------------------
+
+bool Camera::ThreeChanComputeFollowSolverPose(
+    LVector& outEye,
+    LVector& outTarget,
+    s32& outFov) {
+
+    if (!targetThing || !cameraAnchor) {
+        return false;
+    }
+
+    const LVector savedCurPos = curPos;
+    const LVector savedPrevTargetPos = prevTargetPos;
+    const s32 savedDesiredFov = desiredFOV;
+    const s32 savedLookAtMode = lookAtMode;
+
+    // FollowPath is temporarily used only as the original camera-rail solver.
+    // Do not allow its one-shot lookAtMode path to snap the live camera.
+    lookAtMode = 0;
+
+    FollowPath();
+
+    outEye = curPos;
+    outTarget = prevTargetPos;
+    outFov = desiredFOV;
+
+    curPos = savedCurPos;
+    prevTargetPos = savedPrevTargetPos;
+    desiredFOV = savedDesiredFov;
+    lookAtMode = savedLookAtMode;
+
+    return true;
+}
+
+void Camera::ThreeChanApplyExternalPose(
+    const LVector& eye,
+    const LVector& target,
+    s32 fov,
+    bool snapPresentation) {
+
+    position = eye;
+    curPos = eye;
+    prevPosition = eye;
+
+    targetPos = target;
+    prevTargetPos = target;
+
+    movementAccel = { 0, 0, 0 };
+    movementVel = { 0, 0, 0 };
+
+    trackingAccel = { 0, 0, 0 };
+    trackingVel = { 0, 0, 0 };
+
+    SetFOV(fov);
+    SetCurFOV(fov);
+
+    LookAtTarget(&targetPos);
+
+#if HIGH_FPS_PLAY_PRESENTATION
+    if (snapPresentation) {
+        highFpsPrevPosition = position;
+        highFpsPrevTargetPos = targetPos;
+
+        highFpsPrevCamAngleX = camAngleX;
+        highFpsPrevCamAngleY = camAngleY;
+        highFpsPrevCamAngleZ = camAngleZ;
+
+        highFpsSampleValid = true;
+    }
+#else
+    (void)snapPresentation;
+#endif
+}
 // Camera::SetMode (0x80049C44)
 
 void Camera::SetMode(CameraMode mode) {
@@ -917,6 +1004,7 @@ void Camera::FollowPath() {
 
     // PSX: desiredFOV = flagsInterp
     desiredFOV = flagsInterp;
+    ThreeChanCamera::ResolveFollowFov(desiredFOV);
 
     // Interpolate camera eye position along rail (from targetPos = look-at rail)
     // prevTargetPos = nodeA_tgt + seg * t (the look-at goal position)
@@ -1037,6 +1125,15 @@ void Camera::RigidCam() {
     LVector viewPos = {};
     targetThing->GetViewSpot(&viewPos, &prevTargetPos);
 
+    s32 rigidDistance = RESTING_DIST;
+    s32 rigidHeight = HEIGHT_OFFSET;
+    s32 rigidSpinRate = SPIN_RATE;
+
+    ThreeChanCamera::ResolveRigidParameters(
+        rigidDistance,
+        rigidHeight,
+        rigidSpinRate);
+
     s32 followAngle = orientAngles.y;
     s32 deltaToZero = -followAngle;
     if (followAngle != 0) {
@@ -1048,25 +1145,25 @@ void Camera::RigidCam() {
         }
 
         if (deltaToZero < 0) {
-            followAngle = (s16)(followAngle - SPIN_RATE);
-            if (-deltaToZero < SPIN_RATE) {
+            followAngle = (s16)(followAngle - rigidSpinRate);
+            if (-deltaToZero < rigidSpinRate) {
                 followAngle = 0;
             }
         }
         else {
-            followAngle = (s16)(followAngle + SPIN_RATE);
-            if (deltaToZero < SPIN_RATE) {
+            followAngle = (s16)(followAngle + rigidSpinRate);
+            if (deltaToZero < rigidSpinRate) {
                 followAngle = 0;
             }
         }
     }
 
     s32 sinYaw = rmSin16(followAngle);
-    curPos.x = viewPos.x - fixmul16(sinYaw, RESTING_DIST);
-    curPos.y = viewPos.y + HEIGHT_OFFSET;
+    curPos.x = viewPos.x - fixmul16(sinYaw, rigidDistance);
+    curPos.y = viewPos.y + rigidHeight;
 
     s32 sinYaw90 = rmSin16(followAngle + 0x4000);
-    curPos.z = viewPos.z - fixmul16(sinYaw90, RESTING_DIST);
+    curPos.z = viewPos.z - fixmul16(sinYaw90, rigidDistance);
 }
 
 
