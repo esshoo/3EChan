@@ -80,7 +80,25 @@ void TextManager::Init() {
     const char* windowsDir = std::getenv("WINDIR");
     bool arabicFontLoaded = false;
 
-    if (windowsDir && windowsDir[0]) {
+    // Prefer the bundled 3EChan Arabic font when present.
+    // If it is missing or cannot be loaded, keep the existing Windows
+    // font fallback chain unchanged.
+    static constexpr const char* kBundledArabicFont = "pc/fonts/3EChan.ttf";
+    const std::string bundledArabicFontPath = p3d::io::ResolvePath(kBundledArabicFont);
+
+    if (p3d::io::FileExists(bundledArabicFontPath)) {
+        TextFontDesc arabicDesc = {};
+        arabicDesc.name = "Arabic";
+        arabicDesc.path = kBundledArabicFont;
+        arabicDesc.pixelHeight = 48;
+
+        if (LoadFont(arabicDesc)) {
+            LOG("[TextManager] Arabic font loaded: %s", kBundledArabicFont);
+            arabicFontLoaded = true;
+        }
+    }
+
+    if (!arabicFontLoaded && windowsDir && windowsDir[0]) {
         static const char* kArabicFontFiles[] = {
             "tradbdo.ttf",      // Traditional Arabic Bold - primary display font
             "tahomabd.ttf",     // Strong fallback
