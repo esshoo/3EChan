@@ -3,6 +3,7 @@
 #include "extra/threechan_tuning.h"
 #include "extra/threechan_camera.h"
 #include "extra/threechan_group_combat.h"
+#include "extra/threechan_spawning.h"
 #include "imgui.h"
 
 #include <cstdio>
@@ -195,7 +196,15 @@ void DrawSpawningTab(ThreeChanSettings& settings) {
     ImGui::Checkbox("Enable Spawn Tuning", &s.enabled);
 
     Multiplier("Enemy Count", s.enemyCountMultiplier, 0.25f, 4.0f);
-    Multiplier("Respawn Delay", s.respawnDelayMultiplier, 0.10f, 5.0f);
+    ImGui::SliderFloat(
+        "Wave Delay (seconds)",
+        &s.waveDelaySeconds,
+        0.0f,
+        10.0f,
+        "%.2f sec");
+
+    ImGui::TextDisabled(
+        "0 seconds keeps the original immediate wave timing.");
 
     ImGui::TextDisabled("0 keeps the original level value.");
 
@@ -218,6 +227,26 @@ void DrawSpawningTab(ThreeChanSettings& settings) {
         8);
 
     ImGui::Checkbox("Pause Enemy Generators", &s.pauseGenerators);
+    const ThreeChanSpawningStats runtime =
+        ThreeChanSpawning::GetStats();
+
+    ImGui::SeparatorText("Live Runtime");
+
+    ImGui::Text(
+        "Tracked Enemy Generators: %d",
+        runtime.trackedGenerators);
+
+    ImGui::Text(
+        "Live Generated Enemies: %d",
+        runtime.liveGeneratedEnemies);
+
+    ImGui::Text(
+        "Pending Waves: %d",
+        runtime.pendingWaves);
+
+    ImGui::Text(
+        "Paused Generators: %d",
+        runtime.pausedGenerators);
 }
 
 void DrawBossMultiplierSet(

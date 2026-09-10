@@ -10,6 +10,7 @@
 #include "p3d/p3dmath.h"
 #include "p3d/hash.h"
 #include "ai/obstacle_shared.h"
+#include "extra/threechan_spawning.h"
 
 #include <cmath>
 #include <cstring>
@@ -225,6 +226,7 @@ EnemyGenerator::EnemyGenerator(const LVector* pos, u16 type)
 
 EnemyGenerator::~EnemyGenerator() {
     MARKFUNCTION(0x80012274);
+    ThreeChanSpawning::ForgetGenerator(this);
 }
 
 void EnemyGenerator::GenerateObject(s32 param) {
@@ -260,6 +262,9 @@ void EnemyGenerator::GenerateObject(s32 param) {
     generated->orientation.z = 0;
 
     generateCount++;
+    ThreeChanSpawning::OnEnemyGenerated(
+        *this,
+        static_cast<Humanoid*>(generated));
     FightingCollision::InsertHumanoid(static_cast<Humanoid*>(generated));
 }
 
@@ -269,6 +274,7 @@ void EnemyGenerator::Reset() {
     field296 = 0;
     activeZone = nullptr;
     generateCount = 0;
+    ThreeChanSpawning::OnGeneratorReset(*this);
 }
 
 void EnemyGenerator::AnalyzeMesh(DBRoot* root) {
@@ -353,10 +359,12 @@ void EnemyGenerator::AnalyzeMesh(DBRoot* root) {
 
         field176++;
     }
+    ThreeChanSpawning::CaptureGenerator(*this);
 }
 
 void EnemyGenerator::Think() {
     MARKFUNCTION(0x800117D8);
+    ThreeChanSpawning::SyncGenerator(*this);
 
     if (!activeZone) {
         if (g_ai) {
@@ -373,15 +381,24 @@ void EnemyGenerator::Think() {
         }
     }
 
+    if (ThreeChanSpawning::IsPaused(*this)) {
+        return;
+    }
     if (field296) {
+        if (!ThreeChanSpawning::CanProcessPendingWave(*this)) {
+            return;
+        }
         if (field292 > 0) {
             s32 generatedThisStep = 0;
-            while (generatedThisStep < field292 && generatedThisStep < (field200 - generateCount)) {
+            while (generatedThisStep < field292
+                && generatedThisStep < (field200 - generateCount)
+                && ThreeChanSpawning::CanGenerateAnother(*this)) {
                 GenerateObject(0);
                 generatedThisStep++;
             }
         }
 
+        ThreeChanSpawning::OnWaveProcessed(*this);
         field296 = 0;
     }
     else if (activeZone) {

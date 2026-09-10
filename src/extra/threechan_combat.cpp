@@ -2,6 +2,7 @@
 
 #include "extra/threechan_tuning.h"
 #include "extra/threechan_group_combat.h"
+#include "extra/threechan_spawning.h"
 
 #include "ai/humanoid.h"
 #include "ai/player.h"
@@ -303,6 +304,7 @@ void ForgetHumanoid(
     }
 
     ThreeChanGroupCombat::ForgetHumanoid(humanoid);
+    ThreeChanSpawning::ForgetHumanoid(humanoid);
     g_runtime.erase(humanoid);
 }
 

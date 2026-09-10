@@ -49,6 +49,7 @@
 #include "pddi/pddidev.h"
 
 #include "extra/shadowcsm.h"
+#include "extra/threechan_spawning.h"
 
 static void UploadRawTextureToWorldVRAM(s16 x, s16 y, s16 w, s16 h, const u8* raw) {
     if (!g_game || !g_game->GetWorld()) {
@@ -1612,7 +1613,13 @@ static bool IsLevelCompleteMoveNodeReady(Thing* moveThing) {
 
     if (thingType == AITypes::TT_ENEMYGENERATOR) {
         EnemyGenerator* enemyGenerator = static_cast<EnemyGenerator*>(moveThing);
-        if (enemyGenerator->activeZone && enemyGenerator->activeZone->memberCount != 0) {
+
+        if (enemyGenerator->activeZone
+            && enemyGenerator->activeZone->memberCount != 0) {
+            return false;
+        }
+
+        if (ThreeChanSpawning::ShouldBlockLevelComplete(*enemyGenerator)) {
             return false;
         }
     }

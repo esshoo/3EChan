@@ -60,7 +60,7 @@ struct ThreeChanSpawningTuning {
     bool enabled = false;
 
     float enemyCountMultiplier = 1.0f;
-    float respawnDelayMultiplier = 1.0f;
+    float waveDelaySeconds = 0.0f;
 
     // 0 = original level value.
     int spawnBurstOverride = 0;

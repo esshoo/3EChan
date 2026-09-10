@@ -255,7 +255,7 @@ void ClampSettings(ThreeChanSettings& s) {
 
     auto& spawn = s.spawning;
     clampMul(spawn.enemyCountMultiplier);
-    clampMul(spawn.respawnDelayMultiplier);
+    spawn.waveDelaySeconds = std::clamp(spawn.waveDelaySeconds, 0.0f, 30.0f);
     spawn.spawnBurstOverride =
         std::clamp(spawn.spawnBurstOverride, 0, 16);
     spawn.maxAliveOverride =
@@ -500,7 +500,7 @@ bool SaveProfile(const char* rawName) {
     const auto& sp = g_settings.spawning;
     WriteBool(file, "Enabled", sp.enabled);
     WriteFloat(file, "EnemyCountMultiplier", sp.enemyCountMultiplier);
-    WriteFloat(file, "RespawnDelayMultiplier", sp.respawnDelayMultiplier);
+    WriteFloat(file, "WaveDelaySeconds", sp.waveDelaySeconds);
     WriteInt(file, "SpawnBurstOverride", sp.spawnBurstOverride);
     WriteInt(file, "MaxAliveOverride", sp.maxAliveOverride);
     WriteInt(file, "ActiveZoneThresholdOffset", sp.activeZoneThresholdOffset);
@@ -701,7 +701,7 @@ bool LoadProfile(const char* rawName) {
     auto& sp = loaded.spawning;
     ReadBool(values, "Spawning", "Enabled", sp.enabled);
     ReadFloat(values, "Spawning", "EnemyCountMultiplier", sp.enemyCountMultiplier);
-    ReadFloat(values, "Spawning", "RespawnDelayMultiplier", sp.respawnDelayMultiplier);
+    ReadFloat(values, "Spawning", "WaveDelaySeconds", sp.waveDelaySeconds);
     ReadInt(values, "Spawning", "SpawnBurstOverride", sp.spawnBurstOverride);
     ReadInt(values, "Spawning", "MaxAliveOverride", sp.maxAliveOverride);
     ReadInt(values, "Spawning", "ActiveZoneThresholdOffset", sp.activeZoneThresholdOffset);
