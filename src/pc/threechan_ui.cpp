@@ -2,6 +2,7 @@
 
 #include "extra/threechan_tuning.h"
 #include "extra/threechan_camera.h"
+#include "extra/threechan_group_combat.h"
 #include "imgui.h"
 
 #include <cstdio>
@@ -165,6 +166,21 @@ void DrawGroupCombatTab(ThreeChanSettings& settings) {
     ImGui::Checkbox("Attacker Rotation", &g.attackerRotation);
     ImGui::Checkbox("Allow Chain Pressure", &g.chainPressure);
     ImGui::Checkbox("Immediate Replacement", &g.immediateReplacement);
+    const ThreeChanGroupCombatStats runtime =
+        ThreeChanGroupCombat::GetStats();
+
+    ImGui::SeparatorText("Live Runtime");
+
+    ImGui::Text("Tracked Zones: %d", runtime.trackedZones);
+    ImGui::Text("Tracked Humanoids: %d", runtime.trackedHumanoids);
+    ImGui::Text("Engaged Enemies: %d", runtime.engagedHumanoids);
+    ImGui::Text("Active Attack Slots: %d", runtime.activeAttackers);
+
+    ImGui::Text("Physical Fight Capacity: 32");
+
+    ImGui::Text(
+        "Current Logical Capacity: %d",
+        ThreeChanGroupCombat::GetFightingCollisionCapacity());
 
     ImGui::Separator();
     ImGui::TextWrapped(

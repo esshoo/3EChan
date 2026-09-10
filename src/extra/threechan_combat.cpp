@@ -1,6 +1,7 @@
 #include "extra/threechan_combat.h"
 
 #include "extra/threechan_tuning.h"
+#include "extra/threechan_group_combat.h"
 
 #include "ai/humanoid.h"
 #include "ai/player.h"
@@ -301,6 +302,7 @@ void ForgetHumanoid(
         return;
     }
 
+    ThreeChanGroupCombat::ForgetHumanoid(humanoid);
     g_runtime.erase(humanoid);
 }
 
@@ -313,6 +315,7 @@ void SyncHumanoid(
         return;
     }
 
+    ThreeChanGroupCombat::SyncHumanoid(humanoid);
     HumanoidRuntimeState& state =
         g_runtime[&humanoid];
 

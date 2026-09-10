@@ -4,7 +4,7 @@
 
 class Humanoid;
 
-static constexpr s32 FIGHTING_COLLISION_MAX = 12;
+static constexpr s32 FIGHTING_COLLISION_MAX = 32;
 
 struct FightingCollisionAttackType {
     s32 attackType = 0;

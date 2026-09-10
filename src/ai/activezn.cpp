@@ -7,6 +7,7 @@
 #include "gen/database.h"
 #include "gen/path.h"
 #include "p3d/p3dmath.h"
+#include "extra/threechan_group_combat.h"
 
 // SubZoneVolume
 
@@ -64,6 +65,7 @@ ActiveZone::ActiveZone(DBVolume* vol) {
 
 // PSX: __10ActiveZone (ACTIVEZN.CPP:380)
 ActiveZone::~ActiveZone() {
+    ThreeChanGroupCombat::ForgetZone(this);
     // Drain and delete paths
     ccMinNode* n;
     while ((n = pathList.RemHead()) != nullptr) {
@@ -84,6 +86,7 @@ void ActiveZone::AddSubZoneVolume(SubZoneVolume* szv) {
 
 // PSX: AddHumanoidToOverlordMembers__10ActiveZoneP8Humanoid (ACTIVEZN.CPP:390)
 void ActiveZone::AddHumanoidToOverlordMembers(Humanoid* h) {
+    ThreeChanGroupCombat::RegisterMember(this, h);
     if (memberCount >= 3)
         return;
     memberCount++;
@@ -97,6 +100,7 @@ void ActiveZone::AddHumanoidToOverlordMembers(Humanoid* h) {
 
 // PSX: RemoveHumanoidFromOverlordMembers__10ActiveZoneP8Humanoid (ACTIVEZN.CPP:417)
 void ActiveZone::RemoveHumanoidFromOverlordMembers(Humanoid* h) {
+    ThreeChanGroupCombat::UnregisterMember(this, h);
     for (int i = 0; i < 3; i++) {
         if (members[i] == h) {
             members[i] = nullptr;
@@ -124,6 +128,15 @@ s32 ActiveZone::GetNumberOfThinkingMembers() const {
 // PSX: AllowedToMoveIn__10ActiveZoneP8Humanoid (ACTIVEZN.CPP:456, 0x800A6E7C)
 s32 ActiveZone::AllowedToMoveIn(Humanoid* humanoid) {
     MARKFUNCTION(0x800A6E7C);
+    s32 threeChanAllowed = 0;
+
+    if (ThreeChanGroupCombat::TryResolveAllowedToMoveIn(
+            this,
+            humanoid,
+            threeChanAllowed)) {
+
+        return threeChanAllowed;
+    }
 
     s32 activeFighters = 0;
     for (s32 index = 0; index < 3; index++) {

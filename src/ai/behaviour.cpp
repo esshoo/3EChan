@@ -21,6 +21,7 @@
 #include "pc/debugui.h"
 #include "extra/cheats.h"
 #include "extra/threechan_combat.h"
+#include "extra/threechan_group_combat.h"
 #include "p3d/p3dmath.h"
 #include "pc/log.h"
 
@@ -2458,6 +2459,9 @@ void Behaviour::NisControl(Behaviour* b) {
 // PSX: ComplexAttack__9Behaviour (BEHAVE.CPP:1015, 0x80074914)
 void Behaviour::ComplexAttack() {
     MARKFUNCTION(0x80074914);
+    if (!ThreeChanGroupCombat::TryBeginAttack(owner)) {
+        return;
+    }
 
     if (!owner || !animConfigPtr) {
         return;
@@ -2965,7 +2969,8 @@ void Behaviour::NDMS(Behaviour* b) {
 
         if (dy <= NDMS_HEIGHT_DELTA_THRESHOLD
             && owner->DistanceFromPointXZ(player->pos) <= REJOIN_ACTIVE_ZONE_PLAYER_DIST_THRESHOLD) {
-            if (randomAggression < ThreeChanCombat::ResolveAttackFrequency(owner, (s32)b->animConfigPtr->attackFreq)) {
+            if (randomAggression < ThreeChanCombat::ResolveAttackFrequency(owner, (s32)b->animConfigPtr->attackFreq)
+                && ThreeChanGroupCombat::TryBeginAttack(owner)) {
                 if (owner->pos.y < player->pos.y) {
                     owner->RequestAction(9);
                 }
@@ -3343,6 +3348,11 @@ s32 Behaviour::NavigateEnemies(s32 mode) {
         }
     }
 
+    bias = ThreeChanGroupCombat::ResolveNavigationBias(
+        owner->activeZone,
+        owner,
+        sideFieldAngle,
+        bias);
     if (mode == 3) {
         if (navDecisionCounter >= 51) {
             navDecisionCounter = 0;

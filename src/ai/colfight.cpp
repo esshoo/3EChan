@@ -2,6 +2,8 @@
 #include "ai/humanoid.h"
 #include "gen/psxmath_helpers.h"
 #include "p3d/p3dmath.h"
+#include "extra/threechan_group_combat.h"
+#include <algorithm>
 
 // PSX: global array of 12 Humanoid pointers (gArray in decompile)
 static Humanoid* g_fightArray[FIGHTING_COLLISION_MAX] = {};
@@ -12,6 +14,43 @@ static constexpr s32 QUICK_CHECK_MAX_Y = 0x800;
 static constexpr s32 QUICK_CHECK_MAX_Z = 0x800;
 static constexpr s32 COLFIGHT_MAX_WEAPON_SPACING = 0x80;
 
+static s32 GetActiveFightCapacity() {
+    return ThreeChanGroupCombat::GetFightingCollisionCapacity();
+}
+
+static s32 FindFreeHumanoid(s32 capacity) {
+    capacity = std::clamp(
+        capacity,
+        1,
+        FIGHTING_COLLISION_MAX);
+
+    for (s32 i = 0; i < capacity; ++i) {
+        if (!g_fightArray[i]) {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+static void PruneInactiveFightSlots() {
+    const s32 capacity = GetActiveFightCapacity();
+
+    for (s32 i = capacity;
+         i < FIGHTING_COLLISION_MAX;
+         ++i) {
+
+        g_fightArray[i] = nullptr;
+
+        for (s32 j = 0;
+             j < FIGHTING_COLLISION_MAX;
+             ++j) {
+
+            g_fightGrid[i][j] = 0;
+            g_fightGrid[j][i] = 0;
+        }
+    }
+}
 // PSX: FindHumanoid__17FightingCollisionPC8Humanoid (COLFIGHT.CPP:116, 0x80072514)
 static s32 FindHumanoid(const Humanoid* h) {
     MARKFUNCTION(0x80072514);
@@ -185,6 +224,7 @@ s32 Init() {
 // PSX: GetHumanoidArray (COLFIGHT.CPP:258, 0x80072768)
 Humanoid** GetHumanoidArray() {
     MARKFUNCTION(0x80072768);
+    PruneInactiveFightSlots();
     return g_fightArray;
 }
 
@@ -197,7 +237,11 @@ s32 InsertHumanoid(Humanoid* h) {
     }
 
     if (FindHumanoid(h) < 0) {
-        const s32 freeIndex = FindHumanoid(nullptr);
+        PruneInactiveFightSlots();
+
+        const s32 freeIndex =
+            FindFreeHumanoid(
+                GetActiveFightCapacity());
         if (freeIndex < 0) {
             return 0;
         }
@@ -253,6 +297,10 @@ s32 CheckAttack(
     const Humanoid* source,
     const FightingCollisionAttackType* attackType) {
     MARKFUNCTION(0x800727D8);
+    PruneInactiveFightSlots();
+
+    const s32 activeCapacity =
+        GetActiveFightCapacity();
 
     if (!source || !attackType) {
         return 0;
@@ -272,7 +320,7 @@ s32 CheckAttack(
     }
 
     s32 hitCount = 0;
-    for (s32 i = 0; i < FIGHTING_COLLISION_MAX; ++i) {
+    for (s32 i = 0; i < activeCapacity; ++i) {
         Humanoid* target = g_fightArray[i];
         if (!target || target == source) {
             continue;
@@ -301,6 +349,7 @@ s32 CheckAttack(
 // PSX: Set__17FightingCollisionPC8HumanoidT1 (COLFIGHT.CPP:849, 0x80072FB4)
 s32 Set(const Humanoid* source, const Humanoid* target) {
     MARKFUNCTION(0x80072FB4);
+    PruneInactiveFightSlots();
 
     const s32 sourceIndex = FindHumanoid(source);
     const s32 targetIndex = FindHumanoid(target);
