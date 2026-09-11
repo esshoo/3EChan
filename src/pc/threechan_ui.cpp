@@ -2,6 +2,8 @@
 #include "pc/imgui_localization.h"
 
 #include "extra/threechan_tuning.h"
+#include "extra/cheats.h"
+#include "extra/modloader.h"
 #include "extra/threechan_camera.h"
 #include "extra/threechan_group_combat.h"
 #include "extra/threechan_spawning.h"
@@ -12,6 +14,7 @@
 #include <cstring>
 #include <string>
 #include <vector>
+#include <utility>
 
 namespace {
 
@@ -37,7 +40,9 @@ std::string LocalizeTuningMessage(const char* message) {
         { "Original is reserved and cannot be overwritten.", "3E_M_RESERVED" },
         { "Could not create profile directory.", "3E_M_DIRFAIL" },
         { "Could not open profile for writing.", "3E_M_OPENFAIL" },
-        { "Failed while writing profile.", "3E_M_WRITEFAIL" }
+        { "Failed while writing profile.", "3E_M_WRITEFAIL" },
+        { "Could not capture current mod configuration.", "3E_M_MODCAP" },
+        { "Could not apply mod configuration.", "3E_M_MODAPP" }
     };
 
     for (const MessageEntry& entry : messages) {
@@ -93,9 +98,164 @@ void Multiplier(
     ImGui::SliderFloat(label, &value, minValue, maxValue, "%.2fx");
 }
 
+#ifdef MOD_LOADER
+bool SyncCurrentModState(ThreeChanModProfileSettings& mods) {
+    bool systemEnabled = true;
+    std::vector<ModConfiguredState> states;
+
+    if (!ModLoader::Instance().GetConfiguredModStates(
+            systemEnabled,
+            states)) {
+        return false;
+    }
+
+    mods.systemEnabled = systemEnabled;
+    mods.mods.clear();
+    mods.mods.reserve(states.size());
+
+    for (const ModConfiguredState& state : states) {
+        ThreeChanModState profileState;
+        profileState.folder = state.folder;
+        profileState.enabled = state.enabled;
+        mods.mods.push_back(profileState);
+    }
+
+    return true;
+}
+
+bool ApplyUiModState(ThreeChanModProfileSettings& mods) {
+    std::vector<ModConfiguredState> states;
+    states.reserve(mods.mods.size());
+
+    for (const ThreeChanModState& state : mods.mods) {
+        if (state.folder.empty()) {
+            continue;
+        }
+
+        ModConfiguredState configured;
+        configured.folder = state.folder;
+        configured.enabled = state.enabled;
+        states.push_back(std::move(configured));
+    }
+
+    if (!ModLoader::Instance().ApplyConfiguredModStates(
+            mods.systemEnabled,
+            states)) {
+        return false;
+    }
+
+    return true;
+}
+
+#endif
+
+#if NEW_CHEATS
+void CheatCheckbox(
+    const char* english,
+    const char* token,
+    const char* stableId,
+    CheatOption option,
+    bool& profileValue) {
+
+    bool enabled = IsCheatEnabled(option);
+
+    if (ImGui::Checkbox(
+            ImGuiLocalization::Label(
+                english,
+                token,
+                stableId).c_str(),
+            &enabled)) {
+        SetCheatEnabled(option, enabled);
+    }
+
+    profileValue = enabled;
+}
+#endif
+
 void DrawProfilesTab(ThreeChanSettings& settings) {
     ImGui::Checkbox(ImGuiLocalization::Label("3EChan Overrides", "3E_OVR", "3E_Overrides").c_str(), &settings.masterEnabled);
     ImGui::TextDisabled("%s", ImGuiLocalization::Text("Changes apply live while 3EChan Overrides is enabled.", "3E_LIVE").c_str());
+
+    ImGui::Separator();
+
+    ImGui::SeparatorText(ImGuiLocalization::Label("Profile Content", "3E_PROFCONT", "3E_ProfileContent").c_str());
+#if NEW_CHEATS
+    ImGui::Checkbox(ImGuiLocalization::Label("Include Cheats in Profile", "3E_INC_CHEAT", "3E_IncludeCheats").c_str(), &settings.cheats.includeInProfile);
+#else
+    settings.cheats.includeInProfile = false;
+    ImGui::BeginDisabled();
+    ImGui::Checkbox(ImGuiLocalization::Label("Include Cheats in Profile", "3E_INC_CHEAT", "3E_IncludeCheats").c_str(), &settings.cheats.includeInProfile);
+    ImGui::EndDisabled();
+#endif
+#if NEW_CHEATS
+    if (settings.cheats.includeInProfile) {
+        ImGui::Indent();
+
+        CheatCheckbox("All Dragons", "FE_CH_DRAG", "3E_CheatAllDragons", CheatOption::AllDragons, settings.cheats.allDragons);
+        CheatCheckbox("All Levels", "FE_CH_LEVL", "3E_CheatAllLevels", CheatOption::AllLevels, settings.cheats.allLevels);
+        CheatCheckbox("God Mode", "FE_CH_GOD", "3E_CheatGodMode", CheatOption::GodMode, settings.cheats.godMode);
+        CheatCheckbox("One Punch Man", "FE_CH_PNCH", "3E_CheatOnePunch", CheatOption::OnePunchMan, settings.cheats.onePunchMan);
+        CheatCheckbox("Heaven Bound", "FE_CH_HVN", "3E_CheatHeaven", CheatOption::HeavenBound, settings.cheats.heavenBound);
+        CheatCheckbox("Bobble Head", "FE_CH_BOBL", "3E_CheatBobble", CheatOption::BobbleHead, settings.cheats.bobbleHead);
+        CheatCheckbox("Stuntquake", "FE_CH_QUAKE", "3E_CheatStuntquake", CheatOption::Stuntquake, settings.cheats.stuntquake);
+        CheatCheckbox("Mirror World", "FE_CH_MIRR", "3E_CheatMirror", CheatOption::MirrorWorld, settings.cheats.mirrorWorld);
+        CheatCheckbox("99 Lives", "FE_CH_99L", "3E_CheatLives99", CheatOption::Lives99, settings.cheats.lives99);
+
+        ImGui::Unindent();
+    }
+#endif
+#ifdef MOD_LOADER
+    if (ImGui::Checkbox(ImGuiLocalization::Label("Include Mods in Profile", "3E_INC_MODS", "3E_IncludeMods").c_str(), &settings.mods.includeInProfile)) {
+        if (settings.mods.includeInProfile) {
+            if (!SyncCurrentModState(settings.mods)) {
+                settings.mods.includeInProfile = false;
+            }
+        }
+    }
+#else
+    settings.mods.includeInProfile = false;
+    ImGui::BeginDisabled();
+    ImGui::Checkbox(ImGuiLocalization::Label("Include Mods in Profile", "3E_INC_MODS", "3E_IncludeMods").c_str(), &settings.mods.includeInProfile);
+    ImGui::EndDisabled();
+#endif
+#ifdef MOD_LOADER
+    if (settings.mods.includeInProfile) {
+        ImGui::Indent();
+
+        bool modSystemEnabled = settings.mods.systemEnabled;
+
+        if (ImGui::Checkbox(
+                ImGuiLocalization::Label("Mod System Enabled", "3E_MOD_SYS", "3E_ModSystemEnabled").c_str(),
+                &modSystemEnabled)) {
+            settings.mods.systemEnabled = modSystemEnabled;
+            if (!ApplyUiModState(settings.mods)) {
+                SyncCurrentModState(settings.mods);
+            }
+        }
+
+        if (settings.mods.mods.empty()) {
+            ImGui::TextDisabled("%s", ImGuiLocalization::Text("No mods are currently available.", "3E_MOD_EMPTY").c_str());
+        }
+        else {
+            for (ThreeChanModState& state : settings.mods.mods) {
+                ImGui::PushID(state.folder.c_str());
+
+                bool enabled = state.enabled;
+
+                if (ImGui::Checkbox(state.folder.c_str(), &enabled)) {
+                    state.enabled = enabled;
+                    if (!ApplyUiModState(settings.mods)) {
+                        state.enabled = !enabled;
+                    }
+                }
+
+                ImGui::PopID();
+            }
+        }
+
+        ImGui::Unindent();
+    }
+#endif
 
     ImGui::Separator();
 

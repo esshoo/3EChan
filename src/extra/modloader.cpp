@@ -1,4 +1,4 @@
-﻿#include "extra/modloader.h"
+#include "extra/modloader.h"
 #include "gen/config.h"
 
 #ifdef MOD_LOADER
@@ -13,6 +13,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <sstream>
+#include <utility>
 
 static ModLoader s_instance;
 
@@ -811,6 +812,100 @@ bool ModLoader::IsEnabled() const {
     return m_enabled;
 }
 
+bool ModLoader::GetConfiguredModStates(
+    bool& systemEnabled,
+    std::vector<ModConfiguredState>& states) const {
+
+    const ModLoaderConfig config = ReadConfig(kIniPath);
+
+    systemEnabled = config.enabled;
+    states.clear();
+
+    std::error_code ec;
+
+    if (!std::filesystem::is_directory(kModsDir, ec)) {
+        return !ec;
+    }
+
+    std::vector<std::string> modNames;
+
+    std::filesystem::directory_iterator it(kModsDir, ec);
+    const std::filesystem::directory_iterator end;
+
+    while (!ec && it != end) {
+        std::error_code entryEc;
+
+        if (it->is_directory(entryEc) && !entryEc) {
+            modNames.push_back(
+                it->path().filename().string());
+        }
+
+        it.increment(ec);
+    }
+
+    if (ec) {
+        return false;
+    }
+
+    const std::vector<std::string> orderedNames =
+        BuildLoadOrder(config, modNames);
+
+    states.reserve(orderedNames.size());
+
+    for (const std::string& modName : orderedNames) {
+        states.push_back({
+            modName,
+            !IsBlacklisted(config, modName)
+        });
+    }
+
+    return true;
+}
+bool ModLoader::ApplyConfiguredModStates(
+    bool systemEnabled,
+    const std::vector<ModConfiguredState>& states) {
+
+    if (!EnsureStorage()) {
+        return false;
+    }
+
+    ModLoaderConfig config = ReadConfig(kIniPath);
+    config.enabled = systemEnabled;
+
+    for (const ModConfiguredState& state : states) {
+        auto matchesFolder =
+            [&](const std::string& entry) {
+                return EqualsIgnoreCase(entry, state.folder);
+            };
+
+        if (state.enabled) {
+            config.blacklist.erase(
+                std::remove_if(
+                    config.blacklist.begin(),
+                    config.blacklist.end(),
+                    matchesFolder),
+                config.blacklist.end());
+        }
+        else {
+            const auto it = std::find_if(
+                config.blacklist.begin(),
+                config.blacklist.end(),
+                matchesFolder);
+
+            if (it == config.blacklist.end()) {
+                config.blacklist.push_back(state.folder);
+            }
+        }
+    }
+
+    if (!WriteConfig(kIniPath, config)) {
+        LOG("[ModLoader] Failed to apply configured mod states");
+        return false;
+    }
+
+    Reload();
+    return true;
+}
 bool ModLoader::SetModEnabled(const std::string& folder, bool enabled) {
     ModLoaderConfig config = ReadConfig(kIniPath);
     auto it = std::find_if(config.blacklist.begin(), config.blacklist.end(),

@@ -234,6 +234,31 @@ struct ThreeChanAdvancedTuning {
     bool logRuntimeChanges = false;
 };
 
+struct ThreeChanCheatSettings {
+    bool includeInProfile = false;
+
+    bool allDragons = false;
+    bool allLevels = false;
+    bool godMode = false;
+    bool onePunchMan = false;
+    bool heavenBound = false;
+    bool bobbleHead = false;
+    bool stuntquake = false;
+    bool mirrorWorld = false;
+    bool lives99 = false;
+};
+
+struct ThreeChanModState {
+    std::string folder;
+    bool enabled = true;
+};
+
+struct ThreeChanModProfileSettings {
+    bool includeInProfile = false;
+    bool systemEnabled = true;
+
+    std::vector<ThreeChanModState> mods;
+};
 struct ThreeChanSettings {
     bool masterEnabled = false;
     bool applyChangesLive = true;
@@ -243,6 +268,8 @@ struct ThreeChanSettings {
     ThreeChanSpawningTuning spawning;
     ThreeChanBossTuning bosses;
     ThreeChanCameraTuning camera;
+    ThreeChanCheatSettings cheats;
+    ThreeChanModProfileSettings mods;
     ThreeChanInspectorTuning inspector;
     ThreeChanTelemetryTuning telemetry;
     ThreeChanAdvancedTuning advanced;

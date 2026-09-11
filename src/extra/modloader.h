@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "core.h"
 #include "gen/config.h"
 #include <string>
@@ -20,6 +20,10 @@ struct ModInfo {
     bool enabled = false;
 };
 
+struct ModConfiguredState {
+    std::string folder;
+    bool enabled = true;
+};
 class ModLoader {
 public:
     ModLoader() = default;
@@ -100,6 +104,12 @@ public:
     [[nodiscard]] const std::vector<ModInfo>& GetMods() const;
     [[nodiscard]] bool IsEnabled() const;
     bool SetModEnabled(const std::string& folder, bool enabled);
+    bool GetConfiguredModStates(
+        bool& systemEnabled,
+        std::vector<ModConfiguredState>& states) const;
+    bool ApplyConfiguredModStates(
+        bool systemEnabled,
+        const std::vector<ModConfiguredState>& states);
 
     ModLoader(const ModLoader&) = delete;
     ModLoader& operator=(const ModLoader&) = delete;

@@ -1,4 +1,6 @@
 #include "extra/threechan_tuning.h"
+#include "extra/cheats.h"
+#include "extra/modloader.h"
 
 #include <algorithm>
 #include <cctype>
@@ -8,6 +10,7 @@
 #include <sstream>
 #include <string>
 #include <unordered_map>
+#include <utility>
 
 namespace {
 
@@ -17,7 +20,108 @@ std::string g_lastMessage = "Ready.";
 bool g_initialized = false;
 
 constexpr const char* PROFILE_DIR = "userfiles/3EChan/profiles";
+void CaptureCurrentCheatState(ThreeChanCheatSettings& cheats) {
+#if NEW_CHEATS
+    cheats.allDragons =
+        IsCheatEnabled(CheatOption::AllDragons);
 
+    cheats.allLevels =
+        IsCheatEnabled(CheatOption::AllLevels);
+
+    cheats.godMode =
+        IsCheatEnabled(CheatOption::GodMode);
+
+    cheats.onePunchMan =
+        IsCheatEnabled(CheatOption::OnePunchMan);
+
+    cheats.heavenBound =
+        IsCheatEnabled(CheatOption::HeavenBound);
+
+    cheats.bobbleHead =
+        IsCheatEnabled(CheatOption::BobbleHead);
+
+    cheats.stuntquake =
+        IsCheatEnabled(CheatOption::Stuntquake);
+
+    cheats.mirrorWorld =
+        IsCheatEnabled(CheatOption::MirrorWorld);
+
+    cheats.lives99 =
+        IsCheatEnabled(CheatOption::Lives99);
+#else
+    (void)cheats;
+#endif
+}
+
+bool CaptureCurrentModState(ThreeChanModProfileSettings& mods) {
+#ifdef MOD_LOADER
+    bool systemEnabled = true;
+    std::vector<ModConfiguredState> states;
+
+    if (!ModLoader::Instance().GetConfiguredModStates(
+            systemEnabled,
+            states)) {
+        return false;
+    }
+
+    mods.systemEnabled = systemEnabled;
+    mods.mods.clear();
+    mods.mods.reserve(states.size());
+
+    for (const ModConfiguredState& state : states) {
+        ThreeChanModState profileState;
+        profileState.folder = state.folder;
+        profileState.enabled = state.enabled;
+
+        mods.mods.push_back(std::move(profileState));
+    }
+
+    return true;
+#else
+    (void)mods;
+    return false;
+#endif
+}
+bool ApplyModState(const ThreeChanModProfileSettings& mods) {
+#ifdef MOD_LOADER
+    std::vector<ModConfiguredState> states;
+    states.reserve(mods.mods.size());
+
+    for (const ThreeChanModState& state : mods.mods) {
+        if (state.folder.empty()) {
+            continue;
+        }
+
+        ModConfiguredState configured;
+        configured.folder = state.folder;
+        configured.enabled = state.enabled;
+        states.push_back(std::move(configured));
+    }
+
+    return ModLoader::Instance().ApplyConfiguredModStates(
+        mods.systemEnabled,
+        states);
+#else
+    (void)mods;
+    return false;
+#endif
+}
+
+void ApplyCheatState(const ThreeChanCheatSettings& cheats) {
+#if NEW_CHEATS
+    SetCheatEnabled(CheatOption::AllDragons, cheats.allDragons);
+    SetCheatEnabled(CheatOption::AllLevels, cheats.allLevels);
+    SetCheatEnabled(CheatOption::GodMode, cheats.godMode);
+    SetCheatEnabled(CheatOption::OnePunchMan, cheats.onePunchMan);
+    SetCheatEnabled(CheatOption::HeavenBound, cheats.heavenBound);
+    SetCheatEnabled(CheatOption::BobbleHead, cheats.bobbleHead);
+    SetCheatEnabled(CheatOption::Stuntquake, cheats.stuntquake);
+    SetCheatEnabled(CheatOption::MirrorWorld, cheats.mirrorWorld);
+    SetCheatEnabled(CheatOption::Lives99, cheats.lives99);
+#else
+    (void)cheats;
+#endif
+}
 using ValueMap = std::unordered_map<std::string, std::string>;
 
 std::string MakeKey(const char* section, const char* key) {
@@ -159,6 +263,21 @@ void ReadBool(
     if (ParseBoolValue(it->second, parsed)) {
         field = parsed;
     }
+}
+
+void ReadString(
+    const ValueMap& values,
+    const char* section,
+    const char* key,
+    std::string& field) {
+
+    const auto it = values.find(MakeKey(section, key));
+
+    if (it == values.end()) {
+        return;
+    }
+
+    field = it->second;
 }
 
 void ReadInt(
@@ -439,6 +558,16 @@ bool SaveProfile(const char* rawName) {
 
     ClampSettings(g_settings);
 
+    if (g_settings.cheats.includeInProfile) {
+        CaptureCurrentCheatState(g_settings.cheats);
+    }
+
+    if (g_settings.mods.includeInProfile &&
+        !CaptureCurrentModState(g_settings.mods)) {
+        g_lastMessage = "Could not capture current mod configuration.";
+        return false;
+    }
+
     std::error_code ec;
     std::filesystem::create_directories(PROFILE_DIR, ec);
 
@@ -457,7 +586,34 @@ bool SaveProfile(const char* rawName) {
     file << "; 3EChan runtime tuning profile\n";
     file << "; Values are intentionally external so tuning does not require a rebuild.\n\n";
 
-    file << "[General]\n";
+    file << "[ProfileFeatures]\n";
+    WriteBool(file, "IncludeCheats", g_settings.cheats.includeInProfile);
+    WriteBool(file, "IncludeMods", g_settings.mods.includeInProfile);
+
+    file << "\n[Cheats]\n";
+    const auto& ch = g_settings.cheats;
+    WriteBool(file, "AllDragons", ch.allDragons);
+    WriteBool(file, "AllLevels", ch.allLevels);
+    WriteBool(file, "GodMode", ch.godMode);
+    WriteBool(file, "OnePunchMan", ch.onePunchMan);
+    WriteBool(file, "HeavenBound", ch.heavenBound);
+    WriteBool(file, "BobbleHead", ch.bobbleHead);
+    WriteBool(file, "Stuntquake", ch.stuntquake);
+    WriteBool(file, "MirrorWorld", ch.mirrorWorld);
+    WriteBool(file, "Lives99", ch.lives99);
+
+    file << "\n[Mods]\n";
+    const auto& modProfile = g_settings.mods;
+    WriteBool(file, "SystemEnabled", modProfile.systemEnabled);
+    WriteInt(file, "Count", static_cast<int>(modProfile.mods.size()));
+
+    for (size_t i = 0; i < modProfile.mods.size(); ++i) {
+        const ThreeChanModState& state = modProfile.mods[i];
+        file << "Folder" << i << '=' << state.folder << '\n';
+        file << "Enabled" << i << '=' << (state.enabled ? 1 : 0) << '\n';
+    }
+
+    file << "\n[General]\n";
     WriteBool(file, "MasterEnabled", g_settings.masterEnabled);
     WriteBool(file, "ApplyChangesLive", g_settings.applyChangesLive);
 
@@ -661,6 +817,56 @@ bool LoadProfile(const char* rawName) {
     }
 
     ThreeChanSettings loaded = {};
+    ReadBool(
+        values,
+        "ProfileFeatures",
+        "IncludeCheats",
+        loaded.cheats.includeInProfile);
+
+    ReadBool(
+        values,
+        "ProfileFeatures",
+        "IncludeMods",
+        loaded.mods.includeInProfile);
+
+    auto& ch = loaded.cheats;
+
+    ReadBool(values, "Cheats", "AllDragons", ch.allDragons);
+    ReadBool(values, "Cheats", "AllLevels", ch.allLevels);
+    ReadBool(values, "Cheats", "GodMode", ch.godMode);
+    ReadBool(values, "Cheats", "OnePunchMan", ch.onePunchMan);
+    ReadBool(values, "Cheats", "HeavenBound", ch.heavenBound);
+    ReadBool(values, "Cheats", "BobbleHead", ch.bobbleHead);
+    ReadBool(values, "Cheats", "Stuntquake", ch.stuntquake);
+    ReadBool(values, "Cheats", "MirrorWorld", ch.mirrorWorld);
+    ReadBool(values, "Cheats", "Lives99", ch.lives99);
+
+    if (loaded.mods.includeInProfile) {
+        auto& modProfile = loaded.mods;
+
+        ReadBool(values, "Mods", "SystemEnabled", modProfile.systemEnabled);
+
+        int modCount = 0;
+        ReadInt(values, "Mods", "Count", modCount);
+        modCount = std::clamp(modCount, 0, 256);
+
+        modProfile.mods.clear();
+        modProfile.mods.reserve(static_cast<size_t>(modCount));
+
+        for (int i = 0; i < modCount; ++i) {
+            ThreeChanModState state;
+
+            const std::string folderKey = "Folder" + std::to_string(i);
+            const std::string enabledKey = "Enabled" + std::to_string(i);
+
+            ReadString(values, "Mods", folderKey.c_str(), state.folder);
+            ReadBool(values, "Mods", enabledKey.c_str(), state.enabled);
+
+            if (!state.folder.empty()) {
+                modProfile.mods.push_back(std::move(state));
+            }
+        }
+    }
 
     ReadBool(values, "General", "MasterEnabled", loaded.masterEnabled);
     ReadBool(values, "General", "ApplyChangesLive", loaded.applyChangesLive);
@@ -822,6 +1028,16 @@ bool LoadProfile(const char* rawName) {
     ReadBool(values, "Advanced", "LogRuntimeChanges", loaded.advanced.logRuntimeChanges);
 
     ClampSettings(loaded);
+
+    if (loaded.mods.includeInProfile &&
+        !ApplyModState(loaded.mods)) {
+        g_lastMessage = "Could not apply mod configuration.";
+        return false;
+    }
+
+    if (loaded.cheats.includeInProfile) {
+        ApplyCheatState(loaded.cheats);
+    }
 
     g_settings = loaded;
     g_activeProfile = name;
