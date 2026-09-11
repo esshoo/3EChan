@@ -1502,6 +1502,7 @@ void DebugUI::Draw() {
         g_drawDebugConsole = !g_drawDebugConsole;
     }
 
+    ThreeChanUI::DrawQuickProfileSelector();
     ApplyCursorPolicy();
 
     if (ImGui::IsKeyPressed(ImGuiKey_B, false) && ImGui::GetIO().KeyCtrl) {

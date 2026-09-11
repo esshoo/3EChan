@@ -1,5 +1,7 @@
 #include "pc/threechan_ui.h"
 #include "pc/imgui_localization.h"
+#include "pc/inputaction.h"
+#include "gen/game.h"
 
 #include "extra/threechan_tuning.h"
 #include "extra/cheats.h"
@@ -36,7 +38,7 @@ std::string LocalizeTuningMessage(const char* message) {
         { "3EChan tuning system initialized.", "3E_M_INIT" },
         { "Warning: could not create userfiles/3EChan/profiles.", "3E_M_MKDIRWARN" },
         { "Restored original 3EChan tuning values.", "3E_M_RESTORED" },
-        { "Profile name is empty.", "3E_M_EMPTY" },
+        { "Profile name is invalid.", "3E_M_INVALID" },
         { "Original is reserved and cannot be overwritten.", "3E_M_RESERVED" },
         { "Could not create profile directory.", "3E_M_DIRFAIL" },
         { "Could not open profile for writing.", "3E_M_OPENFAIL" },
@@ -959,9 +961,49 @@ void DrawAdvancedTab(ThreeChanSettings& settings) {
             "Disabling a 3EChan subsystem restores its original runtime behaviour.",
             "3E_ADV_NOTE").c_str());
 }
+bool g_quickProfileMenuRequested = false;
 } // namespace
 
 namespace ThreeChanUI {
+
+void DrawQuickProfileSelector() {
+    if (!g_game || g_game->GetState() != GameState::Play) {
+        g_quickProfileMenuRequested = false;
+        return;
+    }
+
+    const bool keyboardTriggered =
+        ImGui::IsKeyPressed(ImGuiKey_F7, false);
+
+    bool gamepadTriggered = false;
+
+    if (g_actionInput) {
+        const bool l3Down =
+            g_actionInput->IsGamepadButtonDown(GpBtn::LStick);
+
+        const bool r3Down =
+            g_actionInput->IsGamepadButtonDown(GpBtn::RStick);
+
+        const bool comboEdge =
+            g_actionInput->IsGamepadButtonTriggered(GpBtn::LStick) ||
+            g_actionInput->IsGamepadButtonTriggered(GpBtn::RStick);
+
+        gamepadTriggered =
+            l3Down && r3Down && comboEdge;
+    }
+
+    if (keyboardTriggered || gamepadTriggered) {
+        g_quickProfileMenuRequested = true;
+    }
+}
+
+bool ConsumeQuickProfileMenuRequest() {
+    const bool requested =
+        g_quickProfileMenuRequested;
+
+    g_quickProfileMenuRequested = false;
+    return requested;
+}
 
 void Draw(bool* open) {
     if (!open || !*open) {

@@ -35,6 +35,7 @@
 #include "fe/hud.h"
 #include "radmovie/movieplayer.h"
 #include "pc/inputaction.h"
+#include "pc/threechan_ui.h"
 #include "pc/tim.h"
 #include "p3d/input.h"
 #include "p3d/context.h"
@@ -1574,12 +1575,25 @@ bool Game::gsPlayState(Game* game) {
     // PSX pause gate: director script must be idle. Keep this on logic ticks only.
     if (logicSteps > 0 && game->state == GameState::Play) {
         s32 canPause = (!g_director || g_director->scriptState == 0);
-        if (canPause && (game->controlVal[0] & PsxPad::Start) != 0) {
+        const bool quickProfileRequest =
+            ThreeChanUI::ConsumeQuickProfileMenuRequest();
+
+        const bool startPauseRequest =
+            (game->controlVal[0] & PsxPad::Start) != 0;
+
+        if (canPause && (startPauseRequest || quickProfileRequest)) {
 #if CUSTOM_MENU
             {
                 World* world = game->GetWorld();
                 const bool isHub = (world && world->GetCurLevelID() == 7);
-                g_feCustomMenuMgr->Activate(isHub ? MenuPage_Frontend : MenuPage_Pause);
+                if (quickProfileRequest) {
+                    g_feCustomMenuMgr->ActivateQuickProfileMenu(
+                        isHub ? MenuPage_Frontend : MenuPage_Pause);
+                }
+                else {
+                    g_feCustomMenuMgr->Activate(
+                        isHub ? MenuPage_Frontend : MenuPage_Pause);
+                }
             }
 #endif
 
@@ -1629,12 +1643,25 @@ bool Game::gsPlayState(Game* game) {
     // PSX: check state==Play AND director scriptState==0 for pause eligibility
     if (game->state == GameState::Play) {
         s32 canPause = (!g_director || g_director->scriptState == 0);
-        if (canPause && (game->controlVal[0] & PsxPad::Start) != 0) {
+        const bool quickProfileRequest =
+            ThreeChanUI::ConsumeQuickProfileMenuRequest();
+
+        const bool startPauseRequest =
+            (game->controlVal[0] & PsxPad::Start) != 0;
+
+        if (canPause && (startPauseRequest || quickProfileRequest)) {
 #if CUSTOM_MENU
             {
                 World* world = game->GetWorld();
                 const bool isHub = (world && world->GetCurLevelID() == 7);
-                g_feCustomMenuMgr->Activate(isHub ? MenuPage_Frontend : MenuPage_Pause);
+                if (quickProfileRequest) {
+                    g_feCustomMenuMgr->ActivateQuickProfileMenu(
+                        isHub ? MenuPage_Frontend : MenuPage_Pause);
+                }
+                else {
+                    g_feCustomMenuMgr->Activate(
+                        isHub ? MenuPage_Frontend : MenuPage_Pause);
+                }
             }
 #endif
 

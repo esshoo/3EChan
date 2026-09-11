@@ -696,3 +696,6 @@ Key%d
 
 [FE_CH_99L]
 99 Lives
+
+[3E_QPROF]
+Profile

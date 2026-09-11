@@ -76,6 +76,7 @@ namespace GpBtn {
     static constexpr s32 DpadRight = 12;
     static constexpr s32 DpadDown = 13;
     static constexpr s32 DpadLeft = 14;
+    static constexpr s32 COUNT = 15;
     static constexpr s32 NONE = -1;
 };
 
@@ -137,6 +138,9 @@ public:
     s32 GetLookX() const { return lookX; }
     s32 GetLookY() const { return lookY; }
 
+    bool IsGamepadButtonDown(s32 button) const;
+    bool IsGamepadButtonTriggered(s32 button) const;
+
     // True if gamepad is the active input device (for UI glyph display, etc.)
     bool IsGamepadActive() const { return gamepadActive; }
     bool HadKeyboardInputThisFrame() const { return hadKeyboardInputThisFrame; }
@@ -189,6 +193,8 @@ private:
     ActionBinding bindings[ACTION_COUNT] = {};
 
     bool gamepadActive = false;
+    bool gamepadButtonDown[GpBtn::COUNT] = {};
+    bool gamepadButtonPrev[GpBtn::COUNT] = {};
     bool keysRegistered = false;
     bool hadKeyboardInputThisFrame = false;
     bool hadMouseInputThisFrame = false;

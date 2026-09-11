@@ -411,6 +411,12 @@ void ActionInput::Update(PlatformInput* platform) {
 #endif
     const bool hasDesktop = hasKeyboard || hasMouse;
     bool gpConnected = platform->IsGamepadConnected();
+
+    for (s32 i = 0; i < GpBtn::COUNT; ++i) {
+        gamepadButtonPrev[i] = gamepadButtonDown[i];
+        gamepadButtonDown[i] =
+            gpConnected && platform->IsGamepadButtonDown(i);
+    }
     if (!gpConnected) {
         hadKeyboardInputThisFrame = hasKeyboard;
         hadMouseInputThisFrame = hasMouse;
@@ -501,6 +507,23 @@ bool ActionInput::JustReleased(Action action) const {
     }
     const InputState& s = states[action];
     return !s.down && s.prevDown;
+}
+
+bool ActionInput::IsGamepadButtonDown(s32 button) const {
+    if (button < 0 || button >= GpBtn::COUNT) {
+        return false;
+    }
+
+    return gamepadButtonDown[button];
+}
+
+bool ActionInput::IsGamepadButtonTriggered(s32 button) const {
+    if (button < 0 || button >= GpBtn::COUNT) {
+        return false;
+    }
+
+    return gamepadButtonDown[button] &&
+        !gamepadButtonPrev[button];
 }
 
 s16 ActionInput::GetDuration(Action action) const {

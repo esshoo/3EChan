@@ -1374,8 +1374,8 @@ Nintendo Switch
 [3E_M_RESTORED]
 تمت استعادة إعدادات 3EChan الأصلية.
 
-[3E_M_EMPTY]
-اسم ملف الإعدادات فارغ.
+[3E_M_INVALID]
+اسم الملف الشخصي غير صالح.
 
 [3E_M_RESERVED]
 الاسم Original محجوز ولا يمكن استبداله.
@@ -1419,3 +1419,5 @@ Nintendo Switch
 
 [3E_MOD_EMPTY]
 لا توجد مودات حالياً.
+[3E_QPROF]
+الملف الشخصي

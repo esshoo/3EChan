@@ -640,3 +640,6 @@ Monde Miroir :
 
 [0xC131692D]
 Appuyez sur <ACT:OPEN_CLOSE_MENU> pour ouvrir le menu principal.
+
+[3E_QPROF]
+Profile

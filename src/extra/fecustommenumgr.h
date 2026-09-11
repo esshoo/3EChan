@@ -24,6 +24,7 @@ enum MenuPage : s32 {
     MenuPage_None,
     MenuPage_Frontend,
     MenuPage_Pause,
+    MenuPage_QuickProfiles,
     MenuPage_Title,
     MenuPage_StartGame,
     MenuPage_Options,
@@ -113,6 +114,7 @@ enum EntryEvent : u8 {
     EntryEvent_None,
     EntryEvent_GoPage,
     EntryEvent_Resume,
+    EntryEvent_LoadThreeChanProfile,
     EntryEvent_Back,
     EntryEvent_NewGame,
     EntryEvent_Continue,
@@ -397,6 +399,7 @@ public:
     bool GetSplashScreenRect(f32* outX, f32* outY, f32* outW, f32* outH) const;
 
     void Activate(MenuPage startPage = MenuPage_Frontend);
+    void ActivateQuickProfileMenu(MenuPage startPage);
     void Deactivate();
 
     // Fade-popup overlay (AutosaveNotice/CheckingUpdate/AssetScanning/AssetExtracting):
@@ -416,6 +419,8 @@ public:
 
 private:
     void BuildPages();
+    void RefreshQuickProfilePage();
+    void RefreshQuickProfileHostPage(MenuPage hostPage);
     PageDef& AddPage(MenuPage id, const char* title,
                      const char* overlay, MenuPage parent, s32 parentEntry, bool pause,
                      s32 frameW = 260, s32 frameH = 150);
@@ -544,6 +549,9 @@ private:
 #endif
     void RenderLocationPage() const;
     bool InvokeLocationSelection();
+
+    bool m_quickProfileMode = false;
+    std::vector<std::string> m_quickProfileNames;
 
     CustomText* m_text = nullptr;
     PageDef m_pages[MenuPage_Count];

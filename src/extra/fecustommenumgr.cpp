@@ -1,5 +1,6 @@
 #include "gen/common.h"
 #include "fecustommenumgr.h"
+#include "extra/threechan_tuning.h"
 #include <cstdlib>
 #include "gen/display.h"
 #include "pc/inputaction.h"
@@ -795,6 +796,11 @@ void feCustomMenuMgr::BuildPages() {
         Button("FE_QTG", EntryEvent_GoPage, MenuPage_QuitConfirm),
                });
 
+    auto& quickProfiles = AddPage(MenuPage_QuickProfiles, "3E_QPROF", "Menu_GameOption", MenuPage_Pause, 0, true, -1, -1);
+    SetEntries(quickProfiles, {
+        Button("FE_BCK", EntryEvent_Back),
+    });
+
     auto& feLocation = AddPage(MenuPage_Location, "", "Menu_Location", MenuPage_None, 0, false, DEF_WINDOW_W, 130);
     SetEntries(feLocation, {
         Button("", EntryEvent_LocationSelect),
@@ -813,6 +819,101 @@ void feCustomMenuMgr::BuildPages() {
     // Entries are populated by RefreshAssetPageEntries() via SetPage()'s refresh hook the
     // first time this page is actually shown - g_psxDiscExtractor doesn't exist yet here.
     AddPage(MenuPage_AssetMissing, "FE_ASSET_TITLE", "Menu_GameOption", MenuPage_None, 0, false, 380, -1);
+}
+
+void feCustomMenuMgr::RefreshQuickProfileHostPage(MenuPage hostPage) {
+    if (hostPage == MenuPage_Pause) {
+        PageDef& page = m_pages[MenuPage_Pause];
+
+        if (m_quickProfileMode) {
+            SetEntries(page, {
+                Button("FE_RSG", EntryEvent_Resume),
+                Button("3E_QPROF", EntryEvent_GoPage, MenuPage_QuickProfiles),
+                Button("FE_OPT", EntryEvent_GoPage, MenuPage_Options),
+                Button("FE_EXL", EntryEvent_GoPage, MenuPage_ExitLevelConfirm),
+                Button("FE_QTG", EntryEvent_GoPage, MenuPage_QuitConfirm),
+            });
+        }
+        else {
+            SetEntries(page, {
+                Button("FE_RSG", EntryEvent_Resume),
+                Button("FE_OPT", EntryEvent_GoPage, MenuPage_Options),
+                Button("FE_EXL", EntryEvent_GoPage, MenuPage_ExitLevelConfirm),
+                Button("FE_QTG", EntryEvent_GoPage, MenuPage_QuitConfirm),
+            });
+        }
+
+        return;
+    }
+
+    if (hostPage == MenuPage_Frontend) {
+        PageDef& page = m_pages[MenuPage_Frontend];
+
+        if (m_quickProfileMode) {
+            SetEntries(page, {
+                Button("FE_RSM", EntryEvent_Resume),
+                Button("3E_QPROF", EntryEvent_GoPage, MenuPage_QuickProfiles),
+                Button("FE_STG", EntryEvent_GoPage, MenuPage_StartGame),
+                Button("FE_OPT", EntryEvent_GoPage, MenuPage_Options),
+                Button("FE_QTG", EntryEvent_GoPage, MenuPage_QuitConfirm),
+            });
+        }
+        else {
+            SetEntries(page, {
+                Button("FE_RSM", EntryEvent_Resume),
+                Button("FE_STG", EntryEvent_GoPage, MenuPage_StartGame),
+                Button("FE_OPT", EntryEvent_GoPage, MenuPage_Options),
+                Button("FE_QTG", EntryEvent_GoPage, MenuPage_QuitConfirm),
+            });
+        }
+    }
+}
+
+void feCustomMenuMgr::RefreshQuickProfilePage() {
+    m_quickProfileNames =
+        ThreeChanTuning::ListProfiles();
+
+    PageDef& page =
+        m_pages[MenuPage_QuickProfiles];
+
+    page.numEntries = 0;
+    page.entriesOffsetX = 0;
+    page.entriesOffsetY = 0;
+
+    const s32 maxProfiles =
+        MAX_ENTRIES_PER_MENU - 1;
+
+    const s32 profileCount =
+        static_cast<s32>(m_quickProfileNames.size()) < maxProfiles
+            ? static_cast<s32>(m_quickProfileNames.size())
+            : maxProfiles;
+
+    for (s32 i = 0; i < profileCount; ++i) {
+        char token[MAX_CUSTOM_MENU_TOKEN + 1] = {};
+
+        std::snprintf(
+            token,
+            sizeof(token),
+            "3E_QP%d",
+            i);
+
+        page.entries[page.numEntries++] =
+            Button(
+                token,
+                EntryEvent_LoadThreeChanProfile);
+    }
+
+    page.entries[page.numEntries++] =
+        Button(
+            "FE_BCK",
+            EntryEvent_Back);
+
+    if (page.autoFrameH) {
+        page.frameH =
+            CalcAutoFrameHeight(
+                page.numEntries,
+                CalcPageExtraHeight(page));
+    }
 }
 
 void feCustomMenuMgr::BuildPopups() {
@@ -2196,6 +2297,10 @@ void feCustomMenuMgr::SetPage(MenuPage page) {
     m_keyBindCaptureActive = false;
     m_keyBindCaptureBlockFrames = 0;
 
+    if (m_currPage == MenuPage_QuickProfiles) {
+        RefreshQuickProfilePage();
+    }
+
     if (m_currPage == MenuPage_Title) {
         if (SaveGameHasAutosave()) {
             SetEntries(m_pages[MenuPage_Title], {
@@ -2307,6 +2412,8 @@ void feCustomMenuMgr::SetPage(MenuPage page) {
 }
 
 void feCustomMenuMgr::Activate(MenuPage startPage) {
+    m_quickProfileMode = false;
+    RefreshQuickProfileHostPage(startPage);
     m_active = true;
     m_cursor = 0;
     LoadControllerOverlayTexture();
@@ -2337,6 +2444,15 @@ void feCustomMenuMgr::Activate(MenuPage startPage) {
     PlaySound(FE_SND_MENU_MOVE);
 }
 
+void feCustomMenuMgr::ActivateQuickProfileMenu(MenuPage startPage) {
+    Activate(startPage);
+
+    m_quickProfileMode = true;
+    RefreshQuickProfileHostPage(startPage);
+    RefreshQuickProfilePage();
+    m_cursor = 0;
+}
+
 void feCustomMenuMgr::Deactivate() {
     PlaySound(FE_SND_MENU_ACCEPT);
     if (m_currPage != MenuPage_Title) {
@@ -2345,6 +2461,7 @@ void feCustomMenuMgr::Deactivate() {
     if (g_display) g_display->SetCursorCaptured(true);
 
     m_active = false;
+    m_quickProfileMode = false;
     m_cursor = 0;
     SetPage(MenuPage_None);
     m_result = (s32)GameResult::ResumePlay;
@@ -2443,6 +2560,21 @@ void feCustomMenuMgr::Confirm() {
             break;
         case EntryEvent_Resume:
             m_result = 8;
+            break;
+        case EntryEvent_LoadThreeChanProfile:
+            if (m_currPage == MenuPage_QuickProfiles &&
+                m_cursor >= 0 &&
+                m_cursor < static_cast<s32>(m_quickProfileNames.size())) {
+                const std::string& profileName =
+                    m_quickProfileNames[m_cursor];
+
+                if (ThreeChanTuning::LoadProfile(profileName.c_str())) {
+                    GoBack();
+                }
+                else {
+                    PlaySound(FE_SND_MENU_7);
+                }
+            }
             break;
         case EntryEvent_Back:
             GoBack();
@@ -5172,6 +5304,12 @@ void feCustomMenuMgr::RenderCurrentPage() {
 
             const char* label = Localize(item.token);
             if (!label) label = item.token;
+
+            if (m_currPage == MenuPage_QuickProfiles &&
+                item.event == EntryEvent_LoadThreeChanProfile &&
+                i < static_cast<s32>(m_quickProfileNames.size())) {
+                label = m_quickProfileNames[i].c_str();
+            }
 #ifdef MOD_LOADER
             if (strcmp(item.token, "FE_MODS") == 0 && strcmp(label, "FE_MODS") == 0) {
                 label = "Mods";

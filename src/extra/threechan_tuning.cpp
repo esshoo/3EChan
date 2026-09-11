@@ -149,35 +149,73 @@ std::string SanitizeProfileName(const char* rawName) {
         return {};
     }
 
-    std::string clean;
+    const std::string name(rawName);
 
-    for (const char c : std::string(rawName)) {
-        const unsigned char uc = static_cast<unsigned char>(c);
+    if (name.empty() || name == "." || name == "..") {
+        return {};
+    }
 
-        if (std::isalnum(uc)
-            || c == '-'
-            || c == '_'
-            || c == ' '
-            || c == '.') {
-            clean.push_back(c);
+    if (name.front() == ' ' ||
+        name.back() == ' ' ||
+        name.back() == '.') {
+        return {};
+    }
+
+    for (const unsigned char c : name) {
+        if (c < 32) {
+            return {};
+        }
+
+        switch (c) {
+            case '<':
+            case '>':
+            case ':':
+            case '"':
+            case '/':
+            case '\\':
+            case '|':
+            case '?':
+            case '*':
+                return {};
+
+            default:
+                break;
         }
     }
 
-    clean = Trim(clean);
-
-    while (!clean.empty() && clean.back() == '.') {
-        clean.pop_back();
+    std::string deviceName = name.substr(0, name.find('.'));
+    for (char& c : deviceName) {
+        c = static_cast<char>(
+            std::toupper(static_cast<unsigned char>(c)));
     }
 
-    if (clean.size() > 48) {
-        clean.resize(48);
+    const bool reservedDeviceName =
+        deviceName == "CON" ||
+        deviceName == "PRN" ||
+        deviceName == "AUX" ||
+        deviceName == "NUL" ||
+        deviceName == "CLOCK$" ||
+        (deviceName.size() == 4 &&
+         deviceName.compare(0, 3, "COM") == 0 &&
+         deviceName[3] >= '1' && deviceName[3] <= '9') ||
+        (deviceName.size() == 4 &&
+         deviceName.compare(0, 3, "LPT") == 0 &&
+         deviceName[3] >= '1' && deviceName[3] <= '9');
+
+    if (reservedDeviceName) {
+        return {};
     }
 
-    return clean;
+    return name;
 }
 
 std::filesystem::path ProfilePath(const std::string& profile) {
-    return std::filesystem::path(PROFILE_DIR) / (profile + ".ini");
+    const std::u8string utf8FileName(
+        reinterpret_cast<const char8_t*>(profile.data()),
+        reinterpret_cast<const char8_t*>(profile.data() + profile.size()));
+
+    return std::filesystem::path(PROFILE_DIR) /
+        std::filesystem::path(utf8FileName + u8".ini");
 }
 
 bool ParseBoolValue(const std::string& value, bool& outValue) {
@@ -547,7 +585,7 @@ bool SaveProfile(const char* rawName) {
     const std::string name = SanitizeProfileName(rawName);
 
     if (name.empty()) {
-        g_lastMessage = "Profile name is empty.";
+        g_lastMessage = "Profile name is invalid.";
         return false;
     }
 
@@ -800,7 +838,7 @@ bool LoadProfile(const char* rawName) {
     const std::string name = SanitizeProfileName(rawName);
 
     if (name.empty()) {
-        g_lastMessage = "Profile name is empty.";
+        g_lastMessage = "Profile name is invalid.";
         return false;
     }
 
@@ -1075,7 +1113,10 @@ std::vector<std::string> ListProfiles() {
             continue;
         }
 
-        const std::string name = path.stem().string();
+        const std::u8string utf8Name = path.stem().u8string();
+        const std::string name(
+            reinterpret_cast<const char*>(utf8Name.data()),
+            utf8Name.size());
 
         if (!name.empty()
             && name != "Original"
