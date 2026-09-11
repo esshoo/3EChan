@@ -59,9 +59,9 @@ struct ThreeChanCameraRuntimeState {
 ThreeChanCameraRuntimeState g_runtime;
 
 static constexpr f64 PI_D = 3.14159265358979323846;
-static constexpr f64 ANGLE_TO_RAD =
+static constexpr f64 THREECHAN_ANGLE_TO_RAD =
     (2.0 * PI_D) / 65536.0;
-static constexpr f64 RAD_TO_ANGLE =
+static constexpr f64 THREECHAN_RAD_TO_ANGLE =
     65536.0 / (2.0 * PI_D);
 
 void SetStatus(const char* text) {
@@ -546,7 +546,7 @@ bool ResolveMovementYaw(
         ClampAngle16(
             static_cast<s32>(
                 std::lround(
-                    radians * RAD_TO_ANGLE)));
+                    radians * THREECHAN_RAD_TO_ANGLE)));
 
     return true;
 }
@@ -612,7 +612,7 @@ LVector BuildThirdPersonDesiredEye(
 
     const f64 radians =
         static_cast<f64>(yaw)
-        * ANGLE_TO_RAD;
+        * THREECHAN_ANGLE_TO_RAD;
 
     const f64 forwardX =
         std::sin(radians);
@@ -923,7 +923,7 @@ bool HandleThirdPerson(
         const f64 radians =
             static_cast<f64>(
                 g_runtime.thirdPersonYaw)
-            * ANGLE_TO_RAD;
+            * THREECHAN_ANGLE_TO_RAD;
 
         const f64 fx =
             std::sin(radians);
