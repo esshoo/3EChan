@@ -27,7 +27,7 @@ void Multiplier(
 
 void DrawProfilesTab(ThreeChanSettings& settings) {
     ImGui::Checkbox("3EChan Overrides", &settings.masterEnabled);
-    ImGui::Checkbox("Apply Changes Live", &settings.applyChangesLive);
+    ImGui::TextDisabled("Changes apply live while 3EChan Overrides is enabled.");
 
     ImGui::Separator();
 
@@ -637,60 +637,63 @@ void DrawCameraTab(ThreeChanSettings& settings) {
 }
 
 void DrawInspectorTab(ThreeChanSettings& settings) {
+    (void)settings;
+
     ImGui::TextWrapped(
-        "This tab will extend the existing 3D AI inspector instead of "
-        "creating a duplicate inspector.");
-
-    ImGui::Checkbox(
-        "Selected Enemy Runtime",
-        &settings.inspector.showSelectedEnemyRuntime);
-
-    ImGui::Checkbox(
-        "Behaviour Runtime",
-        &settings.inspector.showBehaviourRuntime);
-
-    ImGui::Checkbox(
-        "Combat Slot Runtime",
-        &settings.inspector.showCombatSlotRuntime);
-
-    ImGui::Checkbox(
-        "Damage Runtime",
-        &settings.inspector.showDamageRuntime);
-}
-
-void DrawTelemetryTab(ThreeChanSettings& settings) {
-    auto& t = settings.telemetry;
-
-    ImGui::Checkbox("Enable Telemetry", &t.enabled);
-
-    ImGui::Checkbox("Enemy Counts", &t.showEnemyCounts);
-    ImGui::Checkbox("Combat Slots", &t.showCombatSlots);
-    ImGui::Checkbox("Attack Rate", &t.showAttackRate);
-    ImGui::Checkbox("Damage Rate", &t.showDamageRate);
-    ImGui::Checkbox("Selected AI", &t.showSelectedAI);
-    ImGui::Checkbox("Boss Runtime", &t.showBossRuntime);
+        "The existing 3D AI inspector remains the primary inspector.");
 
     ImGui::Separator();
-    ImGui::TextDisabled(
-        "Runtime values will be connected during combat integration.");
+
+    ImGui::TextDisabled("Selected Enemy Runtime - reserved");
+    ImGui::TextDisabled("Behaviour Runtime - reserved");
+    ImGui::TextDisabled("Combat Slot Runtime - reserved");
+    ImGui::TextDisabled("Damage Runtime - reserved");
+
+    ImGui::TextWrapped(
+        "These additional runtime overlays are not connected yet.");
+}
+void DrawTelemetryTab(ThreeChanSettings& settings) {
+    (void)settings;
+
+    ImGui::TextWrapped(
+        "Extended telemetry views are reserved for a later runtime pass.");
+
+    ImGui::Separator();
+
+    ImGui::TextDisabled("Enemy Counts - reserved");
+    ImGui::TextDisabled("Combat Slots - reserved");
+    ImGui::TextDisabled("Attack Rate - reserved");
+    ImGui::TextDisabled("Damage Rate - reserved");
+    ImGui::TextDisabled("Selected AI - reserved");
+    ImGui::TextDisabled("Boss Runtime - reserved");
+
+    ImGui::Separator();
+
+    ImGui::TextWrapped(
+        "Live Group Combat and Spawning statistics are already shown "
+        "inside their respective tabs.");
 }
 
 void DrawAdvancedTab(ThreeChanSettings& settings) {
     auto& a = settings.advanced;
 
-    ImGui::Checkbox("Safe Mode", &a.safeMode);
+    ImGui::TextWrapped(
+        "Runtime safety limits are always enforced by the active "
+        "3EChan subsystems.");
+
+    ImGui::SeparatorText("Runtime Limits");
 
     ImGui::SliderInt(
         "Intended Fighting Collision Capacity",
         &a.intendedFightingCollisionCapacity,
         12,
-        64);
+        32);
 
     ImGui::SliderInt(
         "Hard Enemy Safety Cap",
         &a.hardEnemySafetyCap,
         3,
-        64);
+        32);
 
     ImGui::SliderInt(
         "Hard Simultaneous Attack Cap",
@@ -698,16 +701,13 @@ void DrawAdvancedTab(ThreeChanSettings& settings) {
         1,
         16);
 
-    ImGui::Checkbox(
-        "Log Runtime Changes",
-        &a.logRuntimeChanges);
-
     ImGui::Separator();
-    ImGui::TextWrapped(
-        "Safe Mode will clamp experimental values and preserve the original "
-        "behaviour whenever a 3EChan subsystem is disabled.");
-}
 
+    ImGui::TextDisabled("Runtime change logging - reserved");
+
+    ImGui::TextWrapped(
+        "Disabling a 3EChan subsystem restores its original runtime behaviour.");
+}
 } // namespace
 
 namespace ThreeChanUI {
