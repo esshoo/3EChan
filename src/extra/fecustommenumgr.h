@@ -480,6 +480,7 @@ private:
     void LoadControllerOverlayTexture();
     void LoadMenuOrnamentTexture();
     void LoadSplashTextures();
+    void ReloadTitleScreenLogoTexture();
     bool EnsureTitleScreenEffects(f32 drawW, f32 drawH);
     void ReleaseTitleScreenEffects();
     void UpdateTitleDebrisParticles(f32 dt, f32 emitX, f32 emitY, f32 spanW);
@@ -501,6 +502,7 @@ private:
     static constexpr const char* kTitleScreenBackgroundTexturePath = "pc/textures/frontend/background.png";
     static constexpr const char* kTitleScreenJackieTexturePath = "pc/textures/frontend/jackie.png";
     static constexpr const char* kTitleScreenLogoTexturePath = "pc/textures/frontend/jcslogo.png";
+    static constexpr const char* kTitleScreenArabicLogoTexturePath = "pc/textures/frontend/arjcslogo.png";
     static constexpr const char* kGameOverTexturePath = "pc/textures/frontend/game_over.png";
     static constexpr const char* kLoadingBarTexturePath = "pc/textures/frontend/loading_bar.png";
     static constexpr const char* kSliderOTexturePath = "pc/textures/frontend/slider_o.png";

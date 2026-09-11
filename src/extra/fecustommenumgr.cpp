@@ -2944,6 +2944,7 @@ void feCustomMenuMgr::ApplyValue(const Entry& e, s32 v) {
             v = (s32)LangEnglish;
         }
         g_customText.SetLanguage((GameLanguage)v);
+        ReloadTitleScreenLogoTexture();
     }
     else if (e.binding == EntryBinding_ControllerPromptStyle) {
         if (ControllerPromptManager::SetStyle(v)) {
@@ -3605,6 +3606,36 @@ void feCustomMenuMgr::ReloadControllerPromptTextures() {
     PromptIcons::ResetGamepadSheet();
 }
 
+void feCustomMenuMgr::ReloadTitleScreenLogoTexture() {
+    if (m_titleScreenLogoTexture) {
+        m_titleScreenLogoTexture->Release();
+        m_titleScreenLogoTexture = nullptr;
+    }
+
+    const char* logoPath =
+        (g_customText.GetLanguage() == LangArabic)
+            ? kTitleScreenArabicLogoTexturePath
+            : kTitleScreenLogoTexturePath;
+
+    m_titleScreenLogoTexture =
+        tTexture::LoadFromImagePath(logoPath);
+
+    if (!m_titleScreenLogoTexture &&
+        g_customText.GetLanguage() == LangArabic) {
+        LOG("[CustomMenu] Failed to load Arabic title logo (%s), falling back to %s",
+            kTitleScreenArabicLogoTexturePath,
+            kTitleScreenLogoTexturePath);
+
+        m_titleScreenLogoTexture =
+            tTexture::LoadFromImagePath(kTitleScreenLogoTexturePath);
+    }
+
+    if (m_titleScreenLogoTexture &&
+        m_titleScreenLogoTexture->GetTexture()) {
+        m_titleScreenLogoTexture->GetTexture()->SetFilterMode(PDDI_FILTER_BILINEAR);
+    }
+}
+
 void feCustomMenuMgr::LoadMenuOrnamentTexture() {
     m_menuOrnamentTexture = tTexture::LoadFromImagePath(kMenuOrnamentTexturePath);
     if (!m_menuOrnamentTexture) {
@@ -3649,13 +3680,7 @@ void feCustomMenuMgr::LoadSplashTextures() {
             LOG("[CustomMenu] Failed to load title splash Jackie texture (%s)", kTitleScreenJackieTexturePath);
         }
 
-        m_titleScreenLogoTexture = tTexture::LoadFromImagePath(kTitleScreenLogoTexturePath);
-        if (m_titleScreenLogoTexture && m_titleScreenLogoTexture->GetTexture()) {
-            m_titleScreenLogoTexture->GetTexture()->SetFilterMode(PDDI_FILTER_BILINEAR);
-        }
-        if (!m_titleScreenLogoTexture) {
-            LOG("[CustomMenu] Failed to load title splash logo texture (%s)", kTitleScreenLogoTexturePath);
-        }
+        ReloadTitleScreenLogoTexture();
     }
 
     if (!m_gameOverTextureTried) {
