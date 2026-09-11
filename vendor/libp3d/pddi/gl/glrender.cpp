@@ -1418,6 +1418,45 @@ bool glDisplay::InitDisplay(const pddiDisplayInit& init) {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
+
+    static const ImWchar kThreeChanArabicGlyphRanges[] = {
+        0x0600, 0x06FF,
+        0x0750, 0x077F,
+        0x08A0, 0x08FF,
+        0xFB50, 0xFDFF,
+        0xFE70, 0xFEFF,
+        0
+    };
+
+    io.Fonts->AddFontDefault();
+
+    const char* arabicFontPath = "pc/fonts/3EChan.ttf";
+
+    if (std::FILE* fontFile = std::fopen(arabicFontPath, "rb")) {
+        std::fclose(fontFile);
+
+        ImFontConfig arabicFontConfig;
+        arabicFontConfig.MergeMode = true;
+        arabicFontConfig.PixelSnapH = true;
+
+        if (!io.Fonts->AddFontFromFileTTF(
+                arabicFontPath,
+                13.0f,
+                &arabicFontConfig,
+                kThreeChanArabicGlyphRanges)) {
+            std::fprintf(
+                stderr,
+                "ImGui: failed to load Arabic font: %s\n",
+                arabicFontPath);
+        }
+    }
+    else {
+        std::fprintf(
+            stderr,
+            "ImGui: Arabic font not found: %s\n",
+            arabicFontPath);
+    }
+
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
@@ -1480,6 +1519,7 @@ void glDisplay::RenderOverlay() {
     }
 
     ImGuiIO& io = ImGui::GetIO();
+
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 

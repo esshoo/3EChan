@@ -41,6 +41,7 @@
 #include "extra/shadowcsm.h"
 #include "snd/snddrct.h"
 #include "pc/threechan_ui.h"
+#include "pc/imgui_localization.h"
 
 static bool sEnabled = false;
 static bool sShowPlayer = false;
@@ -1544,33 +1545,33 @@ void DebugUI::Draw() {
     ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
 
     if (ImGui::BeginMainMenuBar()) {
-        if (ImGui::BeginMenu("Windows")) {
-            ImGui::MenuItem("Game", nullptr, &sShowGame);
+        if (ImGui::BeginMenu(ImGuiLocalization::Label("Windows", "IM_WIN", "DBG_Windows").c_str())) {
+            ImGui::MenuItem(ImGuiLocalization::Label("Game", "IM_GAME", "DBG_GameMenu").c_str(), nullptr, &sShowGame);
             ImGui::MenuItem("3EChan", nullptr, &sShowThreeChan);
-            ImGui::MenuItem("Player", nullptr, &sShowPlayer);
-            ImGui::MenuItem("Particles", nullptr, &sShowParticles);
-            ImGui::MenuItem("Effects", nullptr, &sShowEffects);
-            ImGui::MenuItem("Debugging", nullptr, &sShowDebugging);
+            ImGui::MenuItem(ImGuiLocalization::Label("Player", "IM_PLAYER", "DBG_PlayerMenu").c_str(), nullptr, &sShowPlayer);
+            ImGui::MenuItem(ImGuiLocalization::Label("Particles", "IM_PARTICLE", "DBG_ParticlesMenu").c_str(), nullptr, &sShowParticles);
+            ImGui::MenuItem(ImGuiLocalization::Label("Effects", "IM_EFFECTS", "DBG_EffectsMenu").c_str(), nullptr, &sShowEffects);
+            ImGui::MenuItem(ImGuiLocalization::Label("Debugging", "IM_DEBUG", "DBG_DebuggingMenu").c_str(), nullptr, &sShowDebugging);
 #if MODERN_GRAPHICS
-            ImGui::MenuItem("Shadows (CSM)", nullptr, &sShowShadows);
+            ImGui::MenuItem(ImGuiLocalization::Label("Shadows (CSM)", "IM_SHADOWS", "DBG_ShadowsMenu").c_str(), nullptr, &sShowShadows);
 #endif
-            ImGui::MenuItem("Camera", nullptr, &sShowCamera);
-            ImGui::MenuItem("Animation", nullptr, &sShowAnimation);
-            ImGui::MenuItem("Audio", nullptr, &sShowAudio);
-            ImGui::MenuItem("Console Notes", nullptr, &sShowConsoleNotes);
+            ImGui::MenuItem(ImGuiLocalization::Label("Camera", "IM_CAMERA", "DBG_CameraMenu").c_str(), nullptr, &sShowCamera);
+            ImGui::MenuItem(ImGuiLocalization::Label("Animation", "IM_ANIMATION", "DBG_AnimationMenu").c_str(), nullptr, &sShowAnimation);
+            ImGui::MenuItem(ImGuiLocalization::Label("Audio", "IM_AUDIO", "DBG_AudioMenu").c_str(), nullptr, &sShowAudio);
+            ImGui::MenuItem(ImGuiLocalization::Label("Console Notes", "IM_CONSOLE_NOTES", "DBG_ConsoleNotesMenu").c_str(), nullptr, &sShowConsoleNotes);
             ImGui::Separator();
-            ImGui::MenuItem("Asset Exporter", nullptr, &sShowAssetExporter);
-            ImGui::MenuItem("Mods", nullptr, &sShowMods);
+            ImGui::MenuItem(ImGuiLocalization::Label("Asset Exporter", "IM_ASSET_EXPORTER", "DBG_AssetExporterMenu").c_str(), nullptr, &sShowAssetExporter);
+            ImGui::MenuItem(ImGuiLocalization::Label("Mods", "IM_MODS", "DBG_ModsMenu").c_str(), nullptr, &sShowMods);
 #ifdef REAL_TEXTURE_RENDERING
             {
                 bool realTextureMode = p3d::context && p3d::context->IsRealTextureModeEnabled();
-                if (ImGui::MenuItem("Real Textures", nullptr, &realTextureMode)) {
+                if (ImGui::MenuItem(ImGuiLocalization::Label("Real Textures", "IM_REAL_TEXTURES", "DBG_RealTexturesMenu").c_str(), nullptr, &realTextureMode)) {
                     if (p3d::context) p3d::context->SetRealTextureMode(realTextureMode);
                 }
             }
 #endif
             ImGui::Separator();
-            ImGui::MenuItem("ImGui Demo", nullptr, &sShowImGuiDemo);
+            ImGui::MenuItem(ImGuiLocalization::Label("ImGui Demo", "IM_IMGUI_DEMO", "DBG_ImGuiDemoMenu").c_str(), nullptr, &sShowImGuiDemo);
             ImGui::EndMenu();
         }
         ImGui::EndMainMenuBar();
@@ -1581,7 +1582,7 @@ void DebugUI::Draw() {
     }
 
     if (sShowGame && g_game) {
-        if (ImGui::Begin("Game", &sShowGame)) {
+        if (ImGui::Begin(ImGuiLocalization::Label("Game", "IM_GAME", "DBG_GameWindow").c_str(), &sShowGame)) {
             ImGui::Text("State: %s (%d)", GameStateName(g_game->GetState()), (s32)g_game->GetState());
             ImGui::Text("Prev State: %s (%d)", GameStateName(g_game->GetPrevState()), (s32)g_game->GetPrevState());
             if (g_time) {
@@ -1848,7 +1849,7 @@ void DebugUI::Draw() {
 
     if (sShowPlayer) {
         Player* p = Player::s_player;
-        if (ImGui::Begin("Player", &sShowPlayer)) {
+        if (ImGui::Begin(ImGuiLocalization::Label("Player", "IM_PLAYER", "DBG_PlayerWindow").c_str(), &sShowPlayer)) {
             if (p) {
                 Model* m = p->model ? static_cast<Model*>(p->model) : nullptr;
                 AnimStructure* anim = m ? static_cast<AnimStructure*>(m->animStructure) : nullptr;
@@ -2030,7 +2031,7 @@ void DebugUI::Draw() {
     }
 
     if (sShowParticles) {
-        if (ImGui::Begin("Particles", &sShowParticles)) {
+        if (ImGui::Begin(ImGuiLocalization::Label("Particles", "IM_PARTICLE", "DBG_ParticlesWindow").c_str(), &sShowParticles)) {
             if (!Player::s_player) {
                 ImGui::Text("No player");
             }
@@ -2103,7 +2104,7 @@ void DebugUI::Draw() {
     }
 
     if (sShowEffects) {
-        if (ImGui::Begin("Effects", &sShowEffects)) {
+        if (ImGui::Begin(ImGuiLocalization::Label("Effects", "IM_EFFECTS", "DBG_EffectsWindow").c_str(), &sShowEffects)) {
             static constexpr s32 kMaxListedEffects = 1024;
             static Effects* s_effectsList[kMaxListedEffects] = {};
             const s32 effectCount = Effects_DebugGetActive(s_effectsList, kMaxListedEffects);
@@ -2217,7 +2218,7 @@ void DebugUI::Draw() {
     }
 
     if (sShowDebugging) {
-        if (ImGui::Begin("Debugging", &sShowDebugging)) {
+        if (ImGui::Begin(ImGuiLocalization::Label("Debugging", "IM_DEBUG", "DBG_DebuggingWindow").c_str(), &sShowDebugging)) {
             ImGui::SeparatorText("Combat Testing");
             ImGui::Checkbox("Disable player/enemy HP loss", &sDisableHumanoidDamage);
 
@@ -2237,7 +2238,7 @@ void DebugUI::Draw() {
 
 #if MODERN_GRAPHICS
     if (sShowShadows) {
-        if (ImGui::Begin("Shadows (CSM)", &sShowShadows)) {
+        if (ImGui::Begin(ImGuiLocalization::Label("Shadows (CSM)", "IM_SHADOWS", "DBG_ShadowsWindow").c_str(), &sShowShadows)) {
             static const char* kQualityNames[] = { "Off (blob shadow)", "Low", "Medium", "High", "Very High" };
             s32 qualityIdx = (s32)ShadowCSM::GetQuality();
             ImGui::Text("Quality:");
@@ -2301,7 +2302,7 @@ void DebugUI::Draw() {
 #endif
 
     if (sShowCamera && g_game) {
-        if (ImGui::Begin("Camera", &sShowCamera)) {
+        if (ImGui::Begin(ImGuiLocalization::Label("Camera", "IM_CAMERA", "DBG_CameraWindow").c_str(), &sShowCamera)) {
             Camera& cam = g_game->GetCamera();
             ImGui::Text("Mode: %s", CameraModeName(cam.GetMode()));
 
@@ -2339,7 +2340,7 @@ void DebugUI::Draw() {
 
     if (sShowAnimation) {
         Player* p = Player::s_player;
-        if (ImGui::Begin("Animation", &sShowAnimation)) {
+        if (ImGui::Begin(ImGuiLocalization::Label("Animation", "IM_ANIMATION", "DBG_AnimationWindow").c_str(), &sShowAnimation)) {
             if (p && p->model) {
                 Model* m = (Model*)p->model;
                 AnimStructure* anim = (AnimStructure*)m->animStructure;
@@ -2511,7 +2512,7 @@ void DebugUI::Draw() {
     }
 
     if (sShowAudio) {
-        if (ImGui::Begin("Audio", &sShowAudio)) {
+        if (ImGui::Begin(ImGuiLocalization::Label("Audio", "IM_AUDIO", "DBG_AudioWindow").c_str(), &sShowAudio)) {
             if (AudioEngine::IsInitialized()) {
                 f32 master = AudioEngine::GetMasterVolume();
                 if (ImGui::SliderFloat("Master Volume", &master, 0.0f, 1.0f)) {
@@ -2543,12 +2544,12 @@ void DebugUI::Draw() {
     }
 
     if (sShowConsoleNotes) {
-        if (ImGui::Begin("Console Notes", &sShowConsoleNotes)) {
-            ImGui::TextWrapped("Type a comment and press Enter or Submit. It is printed to console and appended to rechan.log.");
+        if (ImGui::Begin(ImGuiLocalization::Label("Console Notes", "IM_CONSOLE_NOTES", "DBG_ConsoleNotesWindow").c_str(), &sShowConsoleNotes)) {
+            ImGui::TextWrapped("%s", ImGuiLocalization::Text("Type a comment and press Enter or Submit. It is printed to console and appended to rechan.log.", "IM_CONSOLE_HELP").c_str());
 
-            bool submit = ImGui::InputText("Comment", sConsoleNoteInput, sizeof(sConsoleNoteInput), ImGuiInputTextFlags_EnterReturnsTrue);
+            bool submit = ImGui::InputText(ImGuiLocalization::Label("Comment", "IM_COMMENT", "DBG_ConsoleComment").c_str(), sConsoleNoteInput, sizeof(sConsoleNoteInput), ImGuiInputTextFlags_EnterReturnsTrue);
             ImGui::SameLine();
-            if (ImGui::Button("Submit")) {
+            if (ImGui::Button(ImGuiLocalization::Label("Submit", "IM_SUBMIT", "DBG_ConsoleSubmit").c_str())) {
                 submit = true;
             }
             ImGui::SameLine();

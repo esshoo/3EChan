@@ -1,4 +1,5 @@
 ﻿#include "extra/assetexporter_ui.h"
+#include "pc/imgui_localization.h"
 
 #include "extra/assetexporter.h"
 #include "extra/modloader.h"
@@ -16,7 +17,7 @@ static int sCategoryFilter = 0;
 static char sNameFilter[128] = {};
 
 void DrawAssetExporterWindow(bool* pOpen) {
-    if (!ImGui::Begin("Asset Exporter", pOpen)) {
+    if (!ImGui::Begin(ImGuiLocalization::Label("Asset Exporter", "IM_ASSET_EXPORTER", "DBG_AssetExporterWindow").c_str(), pOpen)) {
         ImGui::End();
         return;
     }
@@ -106,7 +107,7 @@ void DrawAssetExporterWindow(bool* pOpen) {
 // Mods window
 
 void DrawModsWindow(bool* pOpen) {
-    if (!ImGui::Begin("Mods", pOpen)) {
+    if (!ImGui::Begin(ImGuiLocalization::Label("Mods", "IM_MODS", "DBG_ModsWindow").c_str(), pOpen)) {
         ImGui::End();
         return;
     }
