@@ -100,6 +100,307 @@ void Multiplier(
     ImGui::SliderFloat(label, &value, minValue, maxValue, "%.2fx");
 }
 
+void DrawManualLookSettings(
+    ThreeChanManualLookTuning& look,
+    const char* idScope) {
+
+    ImGui::PushID(idScope);
+
+    ImGui::SeparatorText(
+        ImGuiLocalization::Label(
+            "Manual Look",
+            "3E_MLOOK_TITLE",
+            "3E_ManualLookTitle").c_str());
+
+    ImGui::Checkbox(
+        ImGuiLocalization::Label(
+            "Enable Manual Look",
+            "3E_MLOOK_ENABLE",
+            "3E_ManualLookEnable").c_str(),
+        &look.enabled);
+
+    ImGui::BeginDisabled(!look.enabled);
+
+    ImGui::SeparatorText(
+        ImGuiLocalization::Text(
+            "Right Stick",
+            "3E_RIGHT_STICK").c_str());
+
+    ImGui::Checkbox(
+        ImGuiLocalization::Label(
+            "Enable Right Stick",
+            "3E_RIGHT_STICK_ENABLE",
+            "3E_RightStickEnable").c_str(),
+        &look.rightStickEnabled);
+
+    ImGui::BeginDisabled(!look.rightStickEnabled);
+
+    ImGui::SliderFloat(
+        ImGuiLocalization::Label(
+            "Horizontal Sensitivity",
+            "3E_HSENS",
+            "3E_RightStickHSens").c_str(),
+        &look.rightStickHorizontalSensitivity,
+        0.0f,
+        720.0f,
+        "%.0f deg/s");
+
+    ImGui::SliderFloat(
+        ImGuiLocalization::Label(
+            "Vertical Sensitivity",
+            "3E_VSENS",
+            "3E_RightStickVSens").c_str(),
+        &look.rightStickVerticalSensitivity,
+        0.0f,
+        720.0f,
+        "%.0f deg/s");
+
+    ImGui::SliderFloat(
+        ImGuiLocalization::Label(
+            "Right Stick Deadzone",
+            "3E_DEADZONE",
+            "3E_RightStickDeadzone").c_str(),
+        &look.rightStickDeadzone,
+        0.0f,
+        0.95f,
+        "%.2f");
+
+    ImGui::EndDisabled();
+
+    ImGui::SeparatorText(
+        ImGuiLocalization::Text(
+            "Mouse",
+            "3E_MOUSE").c_str());
+
+    ImGui::Checkbox(
+        ImGuiLocalization::Label(
+            "Enable Mouse Look",
+            "3E_MOUSE_ENABLE",
+            "3E_MouseLookEnable").c_str(),
+        &look.mouseEnabled);
+
+    ImGui::BeginDisabled(!look.mouseEnabled);
+
+    ImGui::SliderFloat(
+        ImGuiLocalization::Label(
+            "Horizontal Sensitivity",
+            "3E_HSENS",
+            "3E_MouseHSens").c_str(),
+        &look.mouseHorizontalSensitivity,
+        0.0f,
+        5.0f,
+        "%.2f");
+
+    ImGui::SliderFloat(
+        ImGuiLocalization::Label(
+            "Vertical Sensitivity",
+            "3E_VSENS",
+            "3E_MouseVSens").c_str(),
+        &look.mouseVerticalSensitivity,
+        0.0f,
+        5.0f,
+        "%.2f");
+
+    ImGui::EndDisabled();
+
+    ImGui::Checkbox(
+        ImGuiLocalization::Label(
+            "Invert Y",
+            "3E_INVERT_Y",
+            "3E_InvertY").c_str(),
+        &look.invertY);
+
+    ImGui::SliderFloat(
+        ImGuiLocalization::Label(
+            "Minimum Pitch",
+            "3E_PITCH_MIN",
+            "3E_PitchMin").c_str(),
+        &look.pitchMinDegrees,
+        -89.0f,
+        89.0f,
+        "%.0f deg");
+
+    ImGui::SliderFloat(
+        ImGuiLocalization::Label(
+            "Maximum Pitch",
+            "3E_PITCH_MAX",
+            "3E_PitchMax").c_str(),
+        &look.pitchMaxDegrees,
+        -89.0f,
+        89.0f,
+        "%.0f deg");
+
+    if (look.pitchMaxDegrees < look.pitchMinDegrees) {
+        look.pitchMaxDegrees = look.pitchMinDegrees;
+    }
+
+    ImGui::SeparatorText(
+        ImGuiLocalization::Text(
+            "Auto Return",
+            "3E_AUTORETURN").c_str());
+
+    ImGui::Checkbox(
+        ImGuiLocalization::Label(
+            "Enable Auto Return",
+            "3E_AUTORETURN_ENABLE",
+            "3E_AutoReturnEnable").c_str(),
+        &look.autoReturnEnabled);
+
+    ImGui::BeginDisabled(!look.autoReturnEnabled);
+
+    ImGui::SliderFloat(
+        ImGuiLocalization::Label(
+            "Return Delay",
+            "3E_AUTORETURN_DELAY",
+            "3E_AutoReturnDelay").c_str(),
+        &look.autoReturnDelay,
+        0.0f,
+        10.0f,
+        "%.2f sec");
+
+    ImGui::SliderFloat(
+        ImGuiLocalization::Label(
+            "Return Speed",
+            "3E_AUTORETURN_SPEED",
+            "3E_AutoReturnSpeed").c_str(),
+        &look.autoReturnSpeed,
+        0.1f,
+        30.0f,
+        "%.2f");
+
+    ImGui::EndDisabled();
+    ImGui::EndDisabled();
+    ImGui::PopID();
+}
+
+void DrawFreeCameraSettings(
+    ThreeChanFreeCameraTuning& freeCam) {
+
+    ImGui::SeparatorText(
+        ImGuiLocalization::Text(
+            "Right Stick",
+            "3E_RIGHT_STICK").c_str());
+
+    ImGui::Checkbox(
+        ImGuiLocalization::Label(
+            "Enable Right Stick",
+            "3E_RIGHT_STICK_ENABLE",
+            "3E_FreeRightStickEnable").c_str(),
+        &freeCam.rightStickEnabled);
+
+    ImGui::BeginDisabled(!freeCam.rightStickEnabled);
+
+    ImGui::SliderFloat(
+        ImGuiLocalization::Label(
+            "Horizontal Sensitivity",
+            "3E_HSENS",
+            "3E_FreeRightStickHSens").c_str(),
+        &freeCam.rightStickHorizontalSensitivity,
+        0.0f,
+        720.0f,
+        "%.0f deg/s");
+
+    ImGui::SliderFloat(
+        ImGuiLocalization::Label(
+            "Vertical Sensitivity",
+            "3E_VSENS",
+            "3E_FreeRightStickVSens").c_str(),
+        &freeCam.rightStickVerticalSensitivity,
+        0.0f,
+        720.0f,
+        "%.0f deg/s");
+
+    ImGui::SliderFloat(
+        ImGuiLocalization::Label(
+            "Right Stick Deadzone",
+            "3E_DEADZONE",
+            "3E_FreeRightStickDeadzone").c_str(),
+        &freeCam.rightStickDeadzone,
+        0.0f,
+        0.95f,
+        "%.2f");
+
+    ImGui::EndDisabled();
+
+    ImGui::SeparatorText(
+        ImGuiLocalization::Text(
+            "Mouse",
+            "3E_MOUSE").c_str());
+
+    ImGui::Checkbox(
+        ImGuiLocalization::Label(
+            "Enable Mouse Look",
+            "3E_MOUSE_ENABLE",
+            "3E_FreeMouseLookEnable").c_str(),
+        &freeCam.mouseEnabled);
+
+    ImGui::BeginDisabled(!freeCam.mouseEnabled);
+
+    ImGui::SliderFloat(
+        ImGuiLocalization::Label(
+            "Horizontal Sensitivity",
+            "3E_HSENS",
+            "3E_FreeMouseHSens").c_str(),
+        &freeCam.mouseHorizontalSensitivity,
+        0.0f,
+        5.0f,
+        "%.2f");
+
+    ImGui::SliderFloat(
+        ImGuiLocalization::Label(
+            "Vertical Sensitivity",
+            "3E_VSENS",
+            "3E_FreeMouseVSens").c_str(),
+        &freeCam.mouseVerticalSensitivity,
+        0.0f,
+        5.0f,
+        "%.2f");
+
+    ImGui::EndDisabled();
+
+    ImGui::Checkbox(
+        ImGuiLocalization::Label(
+            "Invert Y",
+            "3E_INVERT_Y",
+            "3E_FreeInvertY").c_str(),
+        &freeCam.invertY);
+
+    ImGui::SeparatorText(
+        ImGuiLocalization::Text(
+            "Movement",
+            "3E_MOVEMENT").c_str());
+
+    ImGui::SliderFloat(
+        ImGuiLocalization::Label(
+            "Movement Speed",
+            "3E_FREE_MOVE_SPEED",
+            "3E_FreeMovementSpeed").c_str(),
+        &freeCam.movementSpeed,
+        0.0f,
+        50000.0f,
+        "%.0f");
+
+    ImGui::SliderFloat(
+        ImGuiLocalization::Label(
+            "Vertical Speed",
+            "3E_FREE_VERTICAL_SPEED",
+            "3E_FreeVerticalSpeed").c_str(),
+        &freeCam.verticalSpeed,
+        0.0f,
+        50000.0f,
+        "%.0f");
+
+    ImGui::SliderFloat(
+        ImGuiLocalization::Label(
+            "Boost Speed",
+            "3E_FREE_BOOST_SPEED",
+            "3E_FreeBoostSpeed").c_str(),
+        &freeCam.boostSpeed,
+        0.0f,
+        100000.0f,
+        "%.0f");
+}
+
 #ifdef MOD_LOADER
 bool SyncCurrentModState(ThreeChanModProfileSettings& mods) {
     bool systemEnabled = true;
@@ -301,8 +602,7 @@ void DrawProfilesTab(ThreeChanSettings& settings) {
     ImGui::SameLine();
 
     if (ImGui::Button(ImGuiLocalization::Label("Reload", "3E_RELOAD", "3E_Reload").c_str())) {
-        ThreeChanTuning::LoadProfile(
-
+        ThreeChanTuning::LoadProfile(g_profileNameBuffer);
     }
 
     ImGui::SameLine();
@@ -597,12 +897,15 @@ void DrawCameraTab(ThreeChanSettings& settings) {
         ImGuiLocalization::Text("Fixed Frame (Experimental)", "3E_CAM_FIXED");
     const std::string thirdPersonMode =
         ImGuiLocalization::Text("Close Third Person (Experimental)", "3E_CAM_THIRD");
+    const std::string freeCameraMode =
+        ImGuiLocalization::Text("Free Camera", "3E_CAM_FREE");
 
     const char* cameraModes[] = {
         followMode.c_str(),
         rigidMode.c_str(),
         fixedMode.c_str(),
-        thirdPersonMode.c_str()
+        thirdPersonMode.c_str(),
+        freeCameraMode.c_str()
     };
 
     int mode = static_cast<int>(c.mode);
@@ -611,7 +914,7 @@ void DrawCameraTab(ThreeChanSettings& settings) {
         ImGuiLocalization::Label("Camera Mode", "3E_CAM_MODE", "3E_CameraMode").c_str(),
         &mode,
         cameraModes,
-        4)) {
+        5)) {
 
         c.mode = static_cast<ThreeChanCameraMode>(mode);
     }
@@ -633,6 +936,10 @@ void DrawCameraTab(ThreeChanSettings& settings) {
                 c.followTrackingSmoothingMultiplier,
                 0.10f,
                 4.0f);
+
+            DrawManualLookSettings(
+                c.followManualLook,
+                "FollowManualLook");
             break;
 
         case ThreeChanCameraMode::RigidOriginal:
@@ -654,6 +961,10 @@ void DrawCameraTab(ThreeChanSettings& settings) {
                 c.rigidTrackingSmoothingMultiplier,
                 0.10f,
                 4.0f);
+
+            DrawManualLookSettings(
+                c.rigidManualLook,
+                "RigidManualLook");
             break;
 
         case ThreeChanCameraMode::FixedFrameExperimental:
@@ -720,6 +1031,10 @@ void DrawCameraTab(ThreeChanSettings& settings) {
                 ImGuiLocalization::Label("Track Jackie While Camera Is Fixed", "3E_TRACK_JACKIE", "3E_FixedTrackJackie").c_str(),
                 &c.fixedTrackJackie);
 
+            DrawManualLookSettings(
+                c.fixedManualLook,
+                "FixedManualLook");
+
             ImGui::SeparatorText(ImGuiLocalization::Label("Debug", "IM_DEBUG", "3E_FixedDebug").c_str());
 
             ImGui::Checkbox(
@@ -732,6 +1047,7 @@ void DrawCameraTab(ThreeChanSettings& settings) {
             break;
 
         case ThreeChanCameraMode::CloseThirdPersonExperimental:
+        {
             ImGui::SeparatorText(ImGuiLocalization::Label("Close Third Person - Experimental", "3E_TP_TITLE", "3E_ThirdPersonTitle").c_str());
 
             ImGui::SliderInt(
@@ -858,6 +1174,10 @@ void DrawCameraTab(ThreeChanSettings& settings) {
                 ImGuiLocalization::Label("Auto Recover Behind Jackie", "3E_TP_RECOVER", "3E_ThirdAutoRecover").c_str(),
                 &c.thirdPersonAutoRecoverBehindJackie);
 
+            DrawManualLookSettings(
+                c.thirdPersonManualLook,
+                "ThirdPersonManualLook");
+
             ImGui::SeparatorText(ImGuiLocalization::Label("Debug", "IM_DEBUG", "3E_ThirdDebug").c_str());
 
             ImGui::Checkbox(
@@ -872,6 +1192,19 @@ void DrawCameraTab(ThreeChanSettings& settings) {
                 ImGuiLocalization::Label("Show Camera Target", "3E_TP_SHOWTGT", "3E_ThirdShowTarget").c_str(),
                 &c.thirdPersonShowTarget);
             break;
+        }
+
+        case ThreeChanCameraMode::FreeCamera:
+        {
+            ImGui::SeparatorText(
+                ImGuiLocalization::Label(
+                    "Free Camera",
+                    "3E_CAM_FREE",
+                    "3E_FreeCameraTitle").c_str());
+
+            DrawFreeCameraSettings(c.freeCamera);
+            break;
+        }
     }
 
     ImGui::Separator();

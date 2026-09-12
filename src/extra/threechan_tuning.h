@@ -8,6 +8,7 @@ enum class ThreeChanCameraMode : int {
     RigidOriginal = 1,
     FixedFrameExperimental = 2,
     CloseThirdPersonExperimental = 3,
+    FreeCamera = 4,
 };
 
 struct ThreeChanEnemyTuning {
@@ -134,10 +135,56 @@ struct ThreeChanBossTuning {
     ThreeChanOscarTuning oscar;
 };
 
+struct ThreeChanManualLookTuning {
+    bool enabled = false;
+
+    bool rightStickEnabled = true;
+    bool mouseEnabled = false;
+
+    float rightStickHorizontalSensitivity = 180.0f;
+    float rightStickVerticalSensitivity = 120.0f;
+
+    float mouseHorizontalSensitivity = 0.12f;
+    float mouseVerticalSensitivity = 0.12f;
+
+    float rightStickDeadzone = 0.15f;
+
+    bool invertY = false;
+
+    float pitchMinDegrees = -35.0f;
+    float pitchMaxDegrees = 55.0f;
+
+    bool autoReturnEnabled = true;
+    float autoReturnDelay = 0.75f;
+    float autoReturnSpeed = 5.0f;
+};
+struct ThreeChanFreeCameraTuning {
+    bool rightStickEnabled = true;
+    bool mouseEnabled = true;
+
+    float rightStickHorizontalSensitivity = 180.0f;
+    float rightStickVerticalSensitivity = 120.0f;
+
+    float mouseHorizontalSensitivity = 0.12f;
+    float mouseVerticalSensitivity = 0.12f;
+
+    float rightStickDeadzone = 0.15f;
+    bool invertY = false;
+
+    float movementSpeed = 4000.0f;
+    float boostSpeed = 14000.0f;
+    float verticalSpeed = 4000.0f;
+};
 struct ThreeChanCameraTuning {
     bool enabled = false;
 
     ThreeChanCameraMode mode = ThreeChanCameraMode::FollowOriginal;
+
+    ThreeChanManualLookTuning followManualLook;
+    ThreeChanManualLookTuning rigidManualLook;
+    ThreeChanManualLookTuning fixedManualLook;
+    ThreeChanManualLookTuning thirdPersonManualLook;
+    ThreeChanFreeCameraTuning freeCamera;
 
     // Original Follow tuning
     int followFov = 10;

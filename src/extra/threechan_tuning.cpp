@@ -354,6 +354,66 @@ void ReadFloat(
     }
 }
 
+void ReadManualLook(
+    const ValueMap& values,
+    const char* section,
+    ThreeChanManualLookTuning& look) {
+
+    ReadBool(values, section, "Enabled", look.enabled);
+    ReadBool(values, section, "RightStickEnabled", look.rightStickEnabled);
+    ReadBool(values, section, "MouseEnabled", look.mouseEnabled);
+
+    ReadFloat(values, section, "RightStickHorizontalSensitivity",
+        look.rightStickHorizontalSensitivity);
+    ReadFloat(values, section, "RightStickVerticalSensitivity",
+        look.rightStickVerticalSensitivity);
+    ReadFloat(values, section, "MouseHorizontalSensitivity",
+        look.mouseHorizontalSensitivity);
+    ReadFloat(values, section, "MouseVerticalSensitivity",
+        look.mouseVerticalSensitivity);
+    ReadFloat(values, section, "RightStickDeadzone",
+        look.rightStickDeadzone);
+
+    ReadBool(values, section, "InvertY", look.invertY);
+    ReadFloat(values, section, "PitchMinDegrees", look.pitchMinDegrees);
+    ReadFloat(values, section, "PitchMaxDegrees", look.pitchMaxDegrees);
+
+    ReadBool(values, section, "AutoReturnEnabled", look.autoReturnEnabled);
+    ReadFloat(values, section, "AutoReturnDelay", look.autoReturnDelay);
+    ReadFloat(values, section, "AutoReturnSpeed", look.autoReturnSpeed);
+}
+
+void ReadFreeCamera(
+    const ValueMap& values,
+    ThreeChanFreeCameraTuning& freeCam) {
+
+    ReadBool(values, "CameraFree", "RightStickEnabled",
+        freeCam.rightStickEnabled);
+    ReadBool(values, "CameraFree", "MouseEnabled",
+        freeCam.mouseEnabled);
+
+    ReadFloat(values, "CameraFree", "RightStickHorizontalSensitivity",
+        freeCam.rightStickHorizontalSensitivity);
+    ReadFloat(values, "CameraFree", "RightStickVerticalSensitivity",
+        freeCam.rightStickVerticalSensitivity);
+    ReadFloat(values, "CameraFree", "MouseHorizontalSensitivity",
+        freeCam.mouseHorizontalSensitivity);
+    ReadFloat(values, "CameraFree", "MouseVerticalSensitivity",
+        freeCam.mouseVerticalSensitivity);
+    ReadFloat(values, "CameraFree", "RightStickDeadzone",
+        freeCam.rightStickDeadzone);
+
+    ReadBool(values, "CameraFree", "InvertY",
+        freeCam.invertY);
+
+    ReadFloat(values, "CameraFree", "MovementSpeed",
+        freeCam.movementSpeed);
+    ReadFloat(values, "CameraFree", "BoostSpeed",
+        freeCam.boostSpeed);
+    ReadFloat(values, "CameraFree", "VerticalSpeed",
+        freeCam.verticalSpeed);
+}
+
 void WriteBool(std::ofstream& file, const char* key, bool value) {
     file << key << '=' << (value ? 1 : 0) << '\n';
 }
@@ -368,6 +428,119 @@ void WriteFloat(std::ofstream& file, const char* key, float value) {
          << std::setprecision(4)
          << value
          << '\n';
+}
+
+void WriteFreeCamera(
+    std::ofstream& file,
+    const ThreeChanFreeCameraTuning& freeCam) {
+
+    file << "\n[CameraFree]\n";
+
+    WriteBool(file, "RightStickEnabled", freeCam.rightStickEnabled);
+    WriteBool(file, "MouseEnabled", freeCam.mouseEnabled);
+
+    WriteFloat(file, "RightStickHorizontalSensitivity",
+        freeCam.rightStickHorizontalSensitivity);
+    WriteFloat(file, "RightStickVerticalSensitivity",
+        freeCam.rightStickVerticalSensitivity);
+    WriteFloat(file, "MouseHorizontalSensitivity",
+        freeCam.mouseHorizontalSensitivity);
+    WriteFloat(file, "MouseVerticalSensitivity",
+        freeCam.mouseVerticalSensitivity);
+    WriteFloat(file, "RightStickDeadzone",
+        freeCam.rightStickDeadzone);
+
+    WriteBool(file, "InvertY", freeCam.invertY);
+
+    WriteFloat(file, "MovementSpeed", freeCam.movementSpeed);
+    WriteFloat(file, "BoostSpeed", freeCam.boostSpeed);
+    WriteFloat(file, "VerticalSpeed", freeCam.verticalSpeed);
+}
+
+void WriteManualLook(
+    std::ofstream& file,
+    const char* section,
+    const ThreeChanManualLookTuning& look) {
+
+    file << "\n[" << section << "]\n";
+
+    WriteBool(file, "Enabled", look.enabled);
+    WriteBool(file, "RightStickEnabled", look.rightStickEnabled);
+    WriteBool(file, "MouseEnabled", look.mouseEnabled);
+
+    WriteFloat(file, "RightStickHorizontalSensitivity",
+        look.rightStickHorizontalSensitivity);
+    WriteFloat(file, "RightStickVerticalSensitivity",
+        look.rightStickVerticalSensitivity);
+    WriteFloat(file, "MouseHorizontalSensitivity",
+        look.mouseHorizontalSensitivity);
+    WriteFloat(file, "MouseVerticalSensitivity",
+        look.mouseVerticalSensitivity);
+    WriteFloat(file, "RightStickDeadzone",
+        look.rightStickDeadzone);
+
+    WriteBool(file, "InvertY", look.invertY);
+    WriteFloat(file, "PitchMinDegrees", look.pitchMinDegrees);
+    WriteFloat(file, "PitchMaxDegrees", look.pitchMaxDegrees);
+
+    WriteBool(file, "AutoReturnEnabled", look.autoReturnEnabled);
+    WriteFloat(file, "AutoReturnDelay", look.autoReturnDelay);
+    WriteFloat(file, "AutoReturnSpeed", look.autoReturnSpeed);
+}
+
+void ClampFreeCamera(ThreeChanFreeCameraTuning& freeCam) {
+    freeCam.rightStickHorizontalSensitivity =
+        std::clamp(freeCam.rightStickHorizontalSensitivity, 0.0f, 720.0f);
+    freeCam.rightStickVerticalSensitivity =
+        std::clamp(freeCam.rightStickVerticalSensitivity, 0.0f, 720.0f);
+
+    freeCam.mouseHorizontalSensitivity =
+        std::clamp(freeCam.mouseHorizontalSensitivity, 0.0f, 5.0f);
+    freeCam.mouseVerticalSensitivity =
+        std::clamp(freeCam.mouseVerticalSensitivity, 0.0f, 5.0f);
+
+    freeCam.rightStickDeadzone =
+        std::clamp(freeCam.rightStickDeadzone, 0.0f, 0.95f);
+
+    freeCam.movementSpeed =
+        std::clamp(freeCam.movementSpeed, 0.0f, 50000.0f);
+    freeCam.boostSpeed =
+        std::clamp(freeCam.boostSpeed, 0.0f, 100000.0f);
+    freeCam.verticalSpeed =
+        std::clamp(freeCam.verticalSpeed, 0.0f, 50000.0f);
+
+    if (freeCam.boostSpeed < freeCam.movementSpeed) {
+        freeCam.boostSpeed = freeCam.movementSpeed;
+    }
+}
+
+void ClampManualLook(ThreeChanManualLookTuning& look) {
+    look.rightStickHorizontalSensitivity =
+        std::clamp(look.rightStickHorizontalSensitivity, 0.0f, 720.0f);
+    look.rightStickVerticalSensitivity =
+        std::clamp(look.rightStickVerticalSensitivity, 0.0f, 720.0f);
+
+    look.mouseHorizontalSensitivity =
+        std::clamp(look.mouseHorizontalSensitivity, 0.0f, 5.0f);
+    look.mouseVerticalSensitivity =
+        std::clamp(look.mouseVerticalSensitivity, 0.0f, 5.0f);
+
+    look.rightStickDeadzone =
+        std::clamp(look.rightStickDeadzone, 0.0f, 0.95f);
+
+    look.pitchMinDegrees =
+        std::clamp(look.pitchMinDegrees, -89.0f, 89.0f);
+    look.pitchMaxDegrees =
+        std::clamp(look.pitchMaxDegrees, -89.0f, 89.0f);
+
+    if (look.pitchMaxDegrees < look.pitchMinDegrees) {
+        look.pitchMaxDegrees = look.pitchMinDegrees;
+    }
+
+    look.autoReturnDelay =
+        std::clamp(look.autoReturnDelay, 0.0f, 10.0f);
+    look.autoReturnSpeed =
+        std::clamp(look.autoReturnSpeed, 0.1f, 30.0f);
 }
 
 void ClampSettings(ThreeChanSettings& s) {
@@ -463,9 +636,15 @@ void ClampSettings(ThreeChanSettings& s) {
     clampMul(s.bosses.oscar.aggressionMultiplier);
 
     auto& c = s.camera;
+    ClampFreeCamera(c.freeCamera);
+
+    ClampManualLook(c.followManualLook);
+    ClampManualLook(c.rigidManualLook);
+    ClampManualLook(c.fixedManualLook);
+    ClampManualLook(c.thirdPersonManualLook);
 
     int cameraMode = static_cast<int>(c.mode);
-    cameraMode = std::clamp(cameraMode, 0, 3);
+    cameraMode = std::clamp(cameraMode, 0, 4);
     c.mode = static_cast<ThreeChanCameraMode>(cameraMode);
 
     c.followFov = std::clamp(c.followFov, 1, 30);
@@ -798,6 +977,12 @@ bool SaveProfile(const char* rawName) {
     WriteBool(file, "ThirdPersonShowCollisionLine", c.thirdPersonShowCollisionLine);
     WriteBool(file, "ThirdPersonShowTarget", c.thirdPersonShowTarget);
 
+    WriteFreeCamera(file, c.freeCamera);
+    WriteManualLook(file, "CameraManualFollow", c.followManualLook);
+    WriteManualLook(file, "CameraManualRigid", c.rigidManualLook);
+    WriteManualLook(file, "CameraManualFixed", c.fixedManualLook);
+    WriteManualLook(file, "CameraManualThirdPerson", c.thirdPersonManualLook);
+
     file << "\n[Inspector]\n";
     WriteBool(file, "ShowSelectedEnemyRuntime", g_settings.inspector.showSelectedEnemyRuntime);
     WriteBool(file, "ShowBehaviourRuntime", g_settings.inspector.showBehaviourRuntime);
@@ -1045,6 +1230,17 @@ bool LoadProfile(const char* rawName) {
     ReadBool(values, "Camera", "ThirdPersonShowDesiredCamera", c.thirdPersonShowDesiredCamera);
     ReadBool(values, "Camera", "ThirdPersonShowCollisionLine", c.thirdPersonShowCollisionLine);
     ReadBool(values, "Camera", "ThirdPersonShowTarget", c.thirdPersonShowTarget);
+
+    ReadFreeCamera(values, c.freeCamera);
+
+    ReadManualLook(
+        values, "CameraManualFollow", c.followManualLook);
+    ReadManualLook(
+        values, "CameraManualRigid", c.rigidManualLook);
+    ReadManualLook(
+        values, "CameraManualFixed", c.fixedManualLook);
+    ReadManualLook(
+        values, "CameraManualThirdPerson", c.thirdPersonManualLook);
 
     ReadBool(values, "Inspector", "ShowSelectedEnemyRuntime", loaded.inspector.showSelectedEnemyRuntime);
     ReadBool(values, "Inspector", "ShowBehaviourRuntime", loaded.inspector.showBehaviourRuntime);

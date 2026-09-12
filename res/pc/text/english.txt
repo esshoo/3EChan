@@ -699,3 +699,69 @@ Key%d
 
 [3E_QPROF]
 Profile
+
+#
+# 3EChan Camera Manual Look / Free Camera
+#
+[3E_CAM_FREE]
+Free Camera
+
+[3E_MLOOK_TITLE]
+Manual Look
+
+[3E_MLOOK_ENABLE]
+Enable Manual Look
+
+[3E_RIGHT_STICK]
+Right Stick
+
+[3E_RIGHT_STICK_ENABLE]
+Enable Right Stick
+
+[3E_HSENS]
+Horizontal Sensitivity
+
+[3E_VSENS]
+Vertical Sensitivity
+
+[3E_DEADZONE]
+Right Stick Deadzone
+
+[3E_MOUSE]
+Mouse
+
+[3E_MOUSE_ENABLE]
+Enable Mouse Look
+
+[3E_INVERT_Y]
+Invert Y
+
+[3E_PITCH_MIN]
+Minimum Pitch
+
+[3E_PITCH_MAX]
+Maximum Pitch
+
+[3E_AUTORETURN]
+Auto Return
+
+[3E_AUTORETURN_ENABLE]
+Enable Auto Return
+
+[3E_AUTORETURN_DELAY]
+Return Delay
+
+[3E_AUTORETURN_SPEED]
+Return Speed
+
+[3E_MOVEMENT]
+Movement
+
+[3E_FREE_MOVE_SPEED]
+Movement Speed
+
+[3E_FREE_VERTICAL_SPEED]
+Vertical Speed
+
+[3E_FREE_BOOST_SPEED]
+Boost Speed

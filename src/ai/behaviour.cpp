@@ -21,6 +21,7 @@
 #include "pc/debugui.h"
 #include "extra/cheats.h"
 #include "extra/threechan_combat.h"
+#include "extra/threechan_camera.h"
 #include "extra/threechan_group_combat.h"
 #include "extra/threechan_boss.h"
 #include "p3d/p3dmath.h"
@@ -2234,7 +2235,8 @@ void Behaviour::PlayerUserControl(Behaviour* self) {
 
     Humanoid* owner = self->owner;
 
-    if (!DebugUI::IsPlayerInputAllowed()) {
+    if (!DebugUI::IsPlayerInputAllowed()
+        || ThreeChanCamera::IsFreeCameraActive()) {
         owner->RequestAction(GA_GUARD_RELEASE);
         return;
     }

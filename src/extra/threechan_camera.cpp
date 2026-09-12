@@ -11,6 +11,10 @@
 #include "gen/game.h"
 #include "gen/time.h"
 
+#include "p3d/context.h"
+#include "p3d/input.h"
+#include "pc/debugui.h"
+
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -47,11 +51,17 @@ struct ThreeChanCameraRuntimeState {
     LVector thirdPersonEye = {};
     LVector thirdPersonTarget = {};
 
+    s32 thirdPersonBaseYaw = 0;
     s32 thirdPersonYaw = 0;
 
     f64 thirdPersonLastMovementTime = -1000.0;
 
     bool thirdPersonCollisionLastFrame = false;
+
+    f32 manualLookYawDegrees = 0.0f;
+    f32 manualLookPitchDegrees = 0.0f;
+    f64 manualLookLastInputTime = -1000.0;
+    bool manualLookReturnActive = false;
 
     char status[128] = "Original camera behaviour";
 };
@@ -128,6 +138,204 @@ f32 SmoothStep01(f32 value) {
     return value * value * (3.0f - 2.0f * value);
 }
 
+void ResetManualLookState() {
+    g_runtime.manualLookYawDegrees = 0.0f;
+    g_runtime.manualLookPitchDegrees = 0.0f;
+    g_runtime.manualLookLastInputTime = -1000.0;
+    g_runtime.manualLookReturnActive = false;
+}
+
+bool ManualLookHasOffset() {
+    return std::fabs(g_runtime.manualLookYawDegrees) > 0.01f
+        || std::fabs(g_runtime.manualLookPitchDegrees) > 0.01f;
+}
+
+bool ManualLookBlocksAutoCenter() {
+    return ManualLookHasOffset()
+        && !g_runtime.manualLookReturnActive;
+}
+
+f32 NormalizeDegrees180(f32 value) {
+    value = std::fmod(value + 180.0f, 360.0f);
+
+    if (value < 0.0f) {
+        value += 360.0f;
+    }
+
+    return value - 180.0f;
+}
+
+f32 ApplyManualLookDeadzone(f32 value, f32 deadzone) {
+    const f32 magnitude = std::fabs(value);
+
+    if (magnitude <= deadzone) {
+        return 0.0f;
+    }
+
+    const f32 range = std::max(0.0001f, 1.0f - deadzone);
+    const f32 scaled = (magnitude - deadzone) / range;
+
+    return value < 0.0f ? -scaled : scaled;
+}
+
+const ThreeChanManualLookTuning* ResolveManualLookTuning(
+    const ThreeChanCameraTuning& cfg) {
+
+    switch (cfg.mode) {
+        case ThreeChanCameraMode::FollowOriginal:
+            return &cfg.followManualLook;
+        case ThreeChanCameraMode::RigidOriginal:
+            return &cfg.rigidManualLook;
+        case ThreeChanCameraMode::FixedFrameExperimental:
+            return &cfg.fixedManualLook;
+        case ThreeChanCameraMode::CloseThirdPersonExperimental:
+            return &cfg.thirdPersonManualLook;
+        case ThreeChanCameraMode::FreeCamera:
+            return nullptr;
+    }
+
+    return nullptr;
+}
+
+void UpdateManualLookState(
+    const ThreeChanManualLookTuning& look) {
+
+    if (!look.enabled) {
+        ResetManualLookState();
+        return;
+    }
+
+    if (!p3d::input || !DebugUI::IsPlayerInputAllowed()) {
+        g_runtime.manualLookReturnActive = false;
+        return;
+    }
+
+    const f32 dt = GetRuntimeDeltaTime();
+    const f64 now = Time::GetTimeInSeconds();
+
+    f32 yawDelta = 0.0f;
+    f32 pitchDelta = 0.0f;
+    bool receivedInput = false;
+
+    if (look.rightStickEnabled
+        && p3d::input->IsGamepadConnected()) {
+
+        f32 stickX = ApplyManualLookDeadzone(
+            p3d::input->GetGamepadAxis(GamepadAxis::RightX),
+            look.rightStickDeadzone);
+
+        f32 stickY = ApplyManualLookDeadzone(
+            p3d::input->GetGamepadAxis(GamepadAxis::RightY),
+            look.rightStickDeadzone);
+
+        if (std::fabs(stickX) > 0.0001f
+            || std::fabs(stickY) > 0.0001f) {
+
+            receivedInput = true;
+
+            yawDelta +=
+                stickX
+                * look.rightStickHorizontalSensitivity
+                * dt;
+
+            pitchDelta +=
+                (look.invertY ? stickY : -stickY)
+                * look.rightStickVerticalSensitivity
+                * dt;
+        }
+    }
+
+    if (look.mouseEnabled) {
+        double mouseDx = 0.0;
+        double mouseDy = 0.0;
+        p3d::input->GetMouseDelta(mouseDx, mouseDy);
+
+        if (std::fabs(mouseDx) > 0.0001
+            || std::fabs(mouseDy) > 0.0001) {
+
+            receivedInput = true;
+
+            yawDelta +=
+                static_cast<f32>(mouseDx)
+                * look.mouseHorizontalSensitivity;
+
+            pitchDelta +=
+                static_cast<f32>(mouseDy)
+                * look.mouseVerticalSensitivity
+                * (look.invertY ? 1.0f : -1.0f);
+        }
+    }
+
+    if (receivedInput) {
+        g_runtime.manualLookYawDegrees =
+            NormalizeDegrees180(
+                g_runtime.manualLookYawDegrees + yawDelta);
+
+        g_runtime.manualLookPitchDegrees =
+            std::clamp(
+                g_runtime.manualLookPitchDegrees + pitchDelta,
+                look.pitchMinDegrees,
+                look.pitchMaxDegrees);
+
+        g_runtime.manualLookLastInputTime = now;
+        g_runtime.manualLookReturnActive = false;
+        return;
+    }
+
+    g_runtime.manualLookReturnActive = false;
+
+    if (!look.autoReturnEnabled
+        || !ManualLookHasOffset()
+        || now - g_runtime.manualLookLastInputTime
+            < static_cast<f64>(look.autoReturnDelay)) {
+        return;
+    }
+
+    g_runtime.manualLookReturnActive = true;
+
+    const f32 alpha =
+        ResponseAlpha(look.autoReturnSpeed, dt);
+
+    g_runtime.manualLookYawDegrees *= 1.0f - alpha;
+    g_runtime.manualLookPitchDegrees *= 1.0f - alpha;
+
+    if (std::fabs(g_runtime.manualLookYawDegrees) <= 0.01f) {
+        g_runtime.manualLookYawDegrees = 0.0f;
+    }
+
+    if (std::fabs(g_runtime.manualLookPitchDegrees) <= 0.01f) {
+        g_runtime.manualLookPitchDegrees = 0.0f;
+    }
+
+    if (!ManualLookHasOffset()) {
+        g_runtime.manualLookReturnActive = false;
+    }
+}
+
+s32 ManualLookYawAngleUnits() {
+    static constexpr f32 ANGLE_UNITS_PER_DEGREE =
+        65536.0f / 360.0f;
+
+    return static_cast<s32>(
+        g_runtime.manualLookYawDegrees
+        * ANGLE_UNITS_PER_DEGREE);
+}
+
+void ApplyManualLookViewOffset(
+    Camera& camera,
+    bool applyYaw,
+    bool snapPresentation) {
+
+    if (!ManualLookHasOffset()) {
+        return;
+    }
+
+    camera.ThreeChanApplyManualViewOffset(
+        applyYaw ? g_runtime.manualLookYawDegrees : 0.0f,
+        g_runtime.manualLookPitchDegrees,
+        snapPresentation);
+}
+
 bool OverridesEnabled() {
     const ThreeChanSettings& settings =
         ThreeChanTuning::GetConst();
@@ -170,7 +378,11 @@ void ResetExperimentalState() {
     g_runtime.fixedFallbackOffsetValid = false;
 
     g_runtime.thirdPersonInitialized = false;
+    g_runtime.thirdPersonBaseYaw = 0;
+    g_runtime.thirdPersonYaw = 0;
     g_runtime.thirdPersonCollisionLastFrame = false;
+
+    ResetManualLookState();
 }
 
 void HandleConfiguredModeChange(int mode) {
@@ -409,6 +621,7 @@ bool HandleFixedFrame(
 
     if (!g_runtime.fixedTransitionActive
         && canReposition
+        && !ManualLookHasOffset()
         && !IsPlayerInsideFixedSafeFrame(
             camera,
             cfg)) {
@@ -512,6 +725,11 @@ bool HandleFixedFrame(
         cfg.fixedFov,
         snapPresentation);
 
+    ApplyManualLookViewOffset(
+        camera,
+        true,
+        snapPresentation);
+
     SetStatus(
         g_runtime.fixedTransitionActive
             ? "Fixed Frame: moving to next camera"
@@ -599,7 +817,7 @@ s32 ResolveThirdPersonDesiredYaw(
         < static_cast<f64>(
             cfg.thirdPersonAutoCenterDelay)) {
 
-        return g_runtime.thirdPersonYaw;
+        return g_runtime.thirdPersonBaseYaw;
     }
 
     return facingYaw;
@@ -785,22 +1003,27 @@ bool HandleThirdPerson(
 
     bool moving = false;
 
-    const s32 desiredYaw =
+    s32 desiredBaseYaw =
         ResolveThirdPersonDesiredYaw(
             *player,
             cfg,
             now,
             moving);
 
+    if (g_runtime.thirdPersonInitialized
+        && ManualLookBlocksAutoCenter()) {
+        desiredBaseYaw = g_runtime.thirdPersonBaseYaw;
+    }
+
     bool snapPresentation = false;
 
     if (!g_runtime.thirdPersonInitialized) {
-        g_runtime.thirdPersonYaw =
-            desiredYaw;
+        g_runtime.thirdPersonBaseYaw =
+            desiredBaseYaw;
     }
     else if (!cfg.thirdPersonSmoothTurns) {
-        g_runtime.thirdPersonYaw =
-            desiredYaw;
+        g_runtime.thirdPersonBaseYaw =
+            desiredBaseYaw;
     }
     else {
         f32 response =
@@ -823,16 +1046,21 @@ bool HandleThirdPerson(
 
         const s32 delta =
             AngleDelta16(
-                desiredYaw,
-                g_runtime.thirdPersonYaw);
+                desiredBaseYaw,
+                g_runtime.thirdPersonBaseYaw);
 
-        g_runtime.thirdPersonYaw =
+        g_runtime.thirdPersonBaseYaw =
             ClampAngle16(
-                g_runtime.thirdPersonYaw
+                g_runtime.thirdPersonBaseYaw
                 + static_cast<s32>(
                     static_cast<f32>(delta)
                     * alpha));
     }
+
+    g_runtime.thirdPersonYaw =
+        ClampAngle16(
+            g_runtime.thirdPersonBaseYaw
+            + ManualLookYawAngleUnits());
 
     LVector desiredTarget =
         PlayerFocusPoint(
@@ -966,6 +1194,11 @@ bool HandleThirdPerson(
         fov,
         snapPresentation);
 
+    ApplyManualLookViewOffset(
+        camera,
+        false,
+        snapPresentation);
+
     SetStatus(
         g_runtime.thirdPersonCollisionLastFrame
             ? "Close Third Person: wall collision active"
@@ -1046,6 +1279,16 @@ bool HandleGameplayCamera(
 
     HandleConfiguredModeChange(
         configuredMode);
+
+    const ThreeChanManualLookTuning* manualLook =
+        ResolveManualLookTuning(cfg);
+
+    if (manualLook) {
+        UpdateManualLookState(*manualLook);
+    }
+    else {
+        ResetManualLookState();
+    }
 
     switch (cfg.mode) {
         case ThreeChanCameraMode::FollowOriginal:
@@ -1140,9 +1383,55 @@ bool HandleGameplayCamera(
                 camera,
                 cfg);
         }
+
+        case ThreeChanCameraMode::FreeCamera:
+        {
+            if (camera.GetMode()
+                != CAM_MODE_DEFAULT) {
+
+                camera.SetMode(
+                    CAM_MODE_DEFAULT);
+            }
+
+            SetStatus(
+                "Free Camera");
+
+            return false;
+        }
     }
 
     return false;
+}
+
+void ApplyManualLookPostUpdate(
+    Camera& camera) {
+
+    if (!OverridesEnabled()
+        || IsCameraSuspended(camera)) {
+        return;
+    }
+
+    const ThreeChanCameraTuning& cfg =
+        ThreeChanTuning::GetConst().camera;
+
+    if (cfg.mode != ThreeChanCameraMode::FollowOriginal
+        && cfg.mode != ThreeChanCameraMode::RigidOriginal) {
+        return;
+    }
+
+    const ThreeChanManualLookTuning* manualLook =
+        ResolveManualLookTuning(cfg);
+
+    if (!manualLook
+        || !manualLook->enabled
+        || !ManualLookHasOffset()) {
+        return;
+    }
+
+    ApplyManualLookViewOffset(
+        camera,
+        true,
+        false);
 }
 
 void ResolveFollowFov(
@@ -1217,6 +1506,19 @@ void ResolveRigidParameters(
 void ResetRuntime() {
     g_runtime =
         ThreeChanCameraRuntimeState{};
+}
+
+bool IsFreeCameraActive() {
+    if (!OverridesEnabled()) {
+        return false;
+    }
+
+    if (!g_game || g_game->GetState() != GameState::Play) {
+        return false;
+    }
+
+    return ThreeChanTuning::GetConst().camera.mode
+        == ThreeChanCameraMode::FreeCamera;
 }
 
 bool IsExperimentalCameraActive() {

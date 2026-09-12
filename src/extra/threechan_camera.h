@@ -7,6 +7,7 @@ class Camera;
 namespace ThreeChanCamera {
 
 bool HandleGameplayCamera(Camera& camera);
+void ApplyManualLookPostUpdate(Camera& camera);
 
 void ResolveFollowFov(s32& desiredFov);
 
@@ -17,6 +18,7 @@ void ResolveRigidParameters(
 
 void ResetRuntime();
 
+bool IsFreeCameraActive();
 bool IsExperimentalCameraActive();
 
 const char* GetRuntimeStatus();

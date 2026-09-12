@@ -105,6 +105,11 @@ public:
         const LVector& target,
         s32 fov,
         bool snapPresentation);
+
+    void ThreeChanApplyManualViewOffset(
+        f32 yawDegrees,
+        f32 pitchDegrees,
+        bool snapPresentation = false);
 private:
     // Mode dispatch functions
     void DebugCam();                           // 0x80048718 = mode 0

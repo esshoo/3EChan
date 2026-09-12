@@ -1421,3 +1421,69 @@ Nintendo Switch
 لا توجد مودات حالياً.
 [3E_QPROF]
 الملف الشخصي
+
+#
+# 3EChan Camera Manual Look / Free Camera
+#
+[3E_CAM_FREE]
+الكاميرا الحرة
+
+[3E_MLOOK_TITLE]
+التحكم اليدوي بالكاميرا
+
+[3E_MLOOK_ENABLE]
+تفعيل التحكم اليدوي بالكاميرا
+
+[3E_RIGHT_STICK]
+العصا اليمنى
+
+[3E_RIGHT_STICK_ENABLE]
+تفعيل العصا اليمنى
+
+[3E_HSENS]
+الحساسية الأفقية
+
+[3E_VSENS]
+الحساسية الرأسية
+
+[3E_DEADZONE]
+المنطقة الميتة للعصا اليمنى
+
+[3E_MOUSE]
+الماوس
+
+[3E_MOUSE_ENABLE]
+تفعيل التحكم بالكاميرا بالماوس
+
+[3E_INVERT_Y]
+عكس المحور الرأسي
+
+[3E_PITCH_MIN]
+الحد الأدنى للميل الرأسي
+
+[3E_PITCH_MAX]
+الحد الأقصى للميل الرأسي
+
+[3E_AUTORETURN]
+العودة التلقائية
+
+[3E_AUTORETURN_ENABLE]
+تفعيل العودة التلقائية
+
+[3E_AUTORETURN_DELAY]
+تأخير العودة
+
+[3E_AUTORETURN_SPEED]
+سرعة العودة
+
+[3E_MOVEMENT]
+الحركة
+
+[3E_FREE_MOVE_SPEED]
+سرعة الحركة
+
+[3E_FREE_VERTICAL_SPEED]
+سرعة الحركة الرأسية
+
+[3E_FREE_BOOST_SPEED]
+سرعة التسريع

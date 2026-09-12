@@ -21,6 +21,8 @@
 #include "gen/director.h"
 #include "pc/log.h"
 #include "extra/threechan_camera.h"
+#include "extra/threechan_tuning.h"
+#include "pc/inputaction.h"
 
 // PSX math helpers
 
@@ -391,6 +393,8 @@ void Camera::Think() {
         if (hasCollision != 0) {
             Move();
         }
+
+        ThreeChanCamera::ApplyManualLookPostUpdate(*this);
     }
     else {
         UpdateAnim();
@@ -691,6 +695,32 @@ void Camera::ThreeChanApplyExternalPose(
     (void)snapPresentation;
 #endif
 }
+
+void Camera::ThreeChanApplyManualViewOffset(
+    f32 yawDegrees,
+    f32 pitchDegrees,
+    bool snapPresentation) {
+
+    static constexpr f32 ANGLE_UNITS_PER_DEGREE =
+        65536.0f / 360.0f;
+
+    camAngleY += static_cast<s32>(
+        yawDegrees * ANGLE_UNITS_PER_DEGREE);
+
+    camAngleX += static_cast<s32>(
+        pitchDegrees * ANGLE_UNITS_PER_DEGREE);
+
+#if HIGH_FPS_PLAY_PRESENTATION
+    if (snapPresentation) {
+        highFpsPrevCamAngleX = camAngleX;
+        highFpsPrevCamAngleY = camAngleY;
+        highFpsPrevCamAngleZ = camAngleZ;
+        highFpsSampleValid = true;
+    }
+#else
+    (void)snapPresentation;
+#endif
+}
 // Camera::SetMode (0x80049C44)
 
 void Camera::SetMode(CameraMode mode) {
@@ -807,41 +837,149 @@ void Camera::DebugCam() {
     }
 
     // PC debug camera: mouse look + WASD movement + Q/E vertical + Shift speed
-    double mdx = 0, mdy = 0;
-    p3d::input->GetMouseDelta(mdx, mdy);
+    if (ThreeChanCamera::IsFreeCameraActive()) {
+        const ThreeChanFreeCameraTuning& freeCam =
+            ThreeChanTuning::GetConst().camera.freeCamera;
 
-    static constexpr s32 MOUSE_SENSITIVITY = 20;
-    if (p3d::input->IsMouseButtonDown(MOUSE_LEFT)) {
-        camAngleY += (s32)(mdx * MOUSE_SENSITIVITY);
-        camAngleX -= (s32)(mdy * MOUSE_SENSITIVITY);
+        static constexpr f32 ANGLE_UNITS_PER_DEGREE =
+            65536.0f / 360.0f;
+
+        const f32 dt =
+            g_time ? g_time->GetDeltaTime() : (1.0f / 30.0f);
+
+        if (freeCam.rightStickEnabled
+            && p3d::input
+            && p3d::input->IsGamepadConnected()) {
+
+            f32 stickX = p3d::input->GetGamepadAxis(
+                GamepadAxis::RightX);
+            f32 stickY = p3d::input->GetGamepadAxis(
+                GamepadAxis::RightY);
+
+            const auto applyDeadzone =
+                [](f32 value, f32 deadzone) -> f32 {
+                    const f32 magnitude =
+                        value < 0.0f ? -value : value;
+
+                    if (magnitude <= deadzone) {
+                        return 0.0f;
+                    }
+
+                    const f32 scaled =
+                        (magnitude - deadzone) / (1.0f - deadzone);
+
+                    return value < 0.0f ? -scaled : scaled;
+                };
+
+            stickX =
+                applyDeadzone(stickX, freeCam.rightStickDeadzone);
+            stickY =
+                applyDeadzone(stickY, freeCam.rightStickDeadzone);
+
+            camAngleY += static_cast<s32>(
+                stickX
+                * freeCam.rightStickHorizontalSensitivity
+                * dt
+                * ANGLE_UNITS_PER_DEGREE);
+
+            const f32 pitchInput =
+                freeCam.invertY ? stickY : -stickY;
+
+            camAngleX += static_cast<s32>(
+                pitchInput
+                * freeCam.rightStickVerticalSensitivity
+                * dt
+                * ANGLE_UNITS_PER_DEGREE);
+        }
+
+        if (freeCam.mouseEnabled) {
+            double mdx = 0.0;
+            double mdy = 0.0;
+            p3d::input->GetMouseDelta(mdx, mdy);
+
+            camAngleY += static_cast<s32>(
+                static_cast<f32>(mdx)
+                * freeCam.mouseHorizontalSensitivity
+                * ANGLE_UNITS_PER_DEGREE);
+
+            const f32 mousePitch =
+                static_cast<f32>(mdy)
+                * freeCam.mouseVerticalSensitivity
+                * (freeCam.invertY ? 1.0f : -1.0f);
+
+            camAngleX += static_cast<s32>(
+                mousePitch * ANGLE_UNITS_PER_DEGREE);
+        }
+    }
+    else {
+        double mdx = 0, mdy = 0;
+        p3d::input->GetMouseDelta(mdx, mdy);
+
+        static constexpr s32 MOUSE_SENSITIVITY = 20;
+        if (p3d::input->IsMouseButtonDown(MOUSE_LEFT)) {
+            camAngleY += (s32)(mdx * MOUSE_SENSITIVITY);
+            camAngleX -= (s32)(mdy * MOUSE_SENSITIVITY);
+        }
     }
 
-    s32 speed = 4000;
-    if (p3d::input->IsKeyDown(KEY_LEFT_SHIFT)) {
-        speed = 14000;
+    f32 moveSpeed = 4000.0f;
+    f32 verticalSpeed = 4000.0f;
+
+    if (ThreeChanCamera::IsFreeCameraActive()) {
+        const ThreeChanFreeCameraTuning& freeCam =
+            ThreeChanTuning::GetConst().camera.freeCamera;
+
+        moveSpeed = freeCam.movementSpeed;
+        verticalSpeed = freeCam.verticalSpeed;
+
+        if (p3d::input->IsKeyDown(KEY_LEFT_SHIFT)) {
+            moveSpeed = freeCam.boostSpeed;
+        }
     }
+    else if (p3d::input->IsKeyDown(KEY_LEFT_SHIFT)) {
+        moveSpeed = 14000.0f;
+        verticalSpeed = 14000.0f;
+    }
+
+    const f32 dtMove =
+        g_time ? g_time->GetDeltaTime() : (1.0f / 30.0f);
 
     s32 ddx = 0;
     s32 ddy = 0;
     s32 ddz = 0;
 
     if (p3d::input->IsKeyDown(KEY_W)) {
-        ddz += speed * g_time->GetDeltaTime();;
+        ddz += static_cast<s32>(moveSpeed * dtMove);
     }
     if (p3d::input->IsKeyDown(KEY_S)) {
-        ddz -= speed * g_time->GetDeltaTime();;
+        ddz -= static_cast<s32>(moveSpeed * dtMove);
     }
     if (p3d::input->IsKeyDown(KEY_A)) {
-        ddx -= speed * g_time->GetDeltaTime();;
+        ddx -= static_cast<s32>(moveSpeed * dtMove);
     }
     if (p3d::input->IsKeyDown(KEY_D)) {
-        ddx += speed * g_time->GetDeltaTime();;
+        ddx += static_cast<s32>(moveSpeed * dtMove);
     }
+    // 3EChan Free Camera: Left Stick movement
+    if (ThreeChanCamera::IsFreeCameraActive()) {
+        const f32 leftStickX =
+            p3d::input->GetLeftStickX();
+
+        const f32 leftStickY =
+            p3d::input->GetLeftStickY();
+
+        ddx += static_cast<s32>(
+            leftStickX * moveSpeed * dtMove);
+
+        ddz -= static_cast<s32>(
+            leftStickY * moveSpeed * dtMove);
+    }
+
     if (p3d::input->IsKeyDown(KEY_E)) {
-        ddy += speed * g_time->GetDeltaTime();;
+        ddy += static_cast<s32>(verticalSpeed * dtMove);
     }
     if (p3d::input->IsKeyDown(KEY_Q)) {
-        ddy -= speed * g_time->GetDeltaTime();;
+        ddy -= static_cast<s32>(verticalSpeed * dtMove);
     }
 
     if (ddx != 0 || ddy != 0 || ddz != 0) {

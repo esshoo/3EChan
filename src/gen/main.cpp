@@ -1,4 +1,4 @@
-﻿#include "common.h"
+#include "common.h"
 #include "p3d/context.h"
 #include "p3d/fileio.h"
 #include "p3d/input.h"
@@ -13,6 +13,7 @@
 #include "pc/audio.h"
 #include "pc/crashreporter.h"
 #include "pc/debugui.h"
+#include "extra/threechan_camera.h"
 #include "pc/inputaction.h"
 #include "pc/rechan_icon_embedded.h"
 #include "pc/textmgr.h"
@@ -338,7 +339,9 @@ int main(int argc, char** argv) {
         }
 #endif
         if (g_inputManager) {
-            const ActionInput* actionInputForGame = DebugUI::ShouldBlockGameInput()
+            const ActionInput* actionInputForGame =
+                (DebugUI::ShouldBlockGameInput()
+                    || ThreeChanCamera::IsFreeCameraActive())
                 ? nullptr
                 : g_actionInput;
             bool commitInputNow = true;
