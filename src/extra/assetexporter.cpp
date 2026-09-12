@@ -1618,6 +1618,65 @@ bool AssetExporter::ExportLevel(const std::vector<u8>& rawData,
     std::vector<NamedLevelGeometry> geometries;
     std::vector<PrimGeomVertex> allVerts; // texture page discovery only
 
+    // BLK entries contain the actual playable-world tPrimGeom used by Block::Draw.
+    // Keep them separate from named 0x6002 geometry: their placement comes from
+    // the matching WDB block volume, while their vertices stay block-local.
+    // A new petal starts at each .WDB; BLKs that follow map 1:1, in order, to
+    // the objects obtained by filtering parameters_petalNN.json for kind="block".
+    // Do not use the JSON "ordinal" as a global index: parameter ordinals are
+    // counted per (kind,name), so the stable cross-file key here is block sequence.
+    struct BlockLevelGeometry {
+        u32 petalIndex = 0;
+        u32 blockSequence = 0;
+        std::vector<PrimGeomVertex> verts;
+        std::vector<u32> indices;
+    };
+    std::vector<BlockLevelGeometry> blockGeometries;
+
+    s32 currentPetal = -1;
+    u32 blockSequence = 0;
+    for (const auto& entry : entries) {
+        if (strncmp(entry.magic, ".WDB", 4) == 0) {
+            ++currentPetal;
+            blockSequence = 0;
+            continue;
+        }
+        if (strncmp(entry.magic, ".BLK", 4) != 0) continue;
+
+        const u32 sequence = blockSequence++;
+        if (currentPetal < 0 || entry.size < 24u + 108u) {
+            LOG("[AssetExporter] Skip invalid BLK: petal=%d sequence=%u size=%u",
+                currentPetal, sequence, entry.size);
+            continue;
+        }
+
+        const u8* blockData = data + entry.offset;
+        // Block::Parse uses d[4] (+16) as the 'has prims' flag and passes
+        // BLK+24 to Block::LoadPrim. Mirror that exact runtime boundary here.
+        if (p3dReadU32LE(blockData + 16) == 0) {
+            LOG("[AssetExporter] BLK has no render prims: petal=%d sequence=%u",
+                currentPetal, sequence);
+            continue;
+        }
+
+        std::vector<PrimGeomVertex> blockVerts;
+        std::vector<u32> blockIndices;
+        if (!ExtractPrimGeomVerts(blockData + 24, entry.size - 24u,
+                                  blockVerts, blockIndices)) {
+            LOG("[AssetExporter] BLK tPrimGeom export failed: petal=%d sequence=%u size=%u",
+                currentPetal, sequence, entry.size);
+            continue;
+        }
+
+        allVerts.insert(allVerts.end(), blockVerts.begin(), blockVerts.end());
+        LOG("[AssetExporter] BLK geometry: petal=%d sequence=%u verts=%zu tris=%zu",
+            currentPetal, sequence, blockVerts.size(), blockIndices.size() / 3u);
+        blockGeometries.push_back(BlockLevelGeometry{
+            static_cast<u32>(currentPetal), sequence,
+            std::move(blockVerts), std::move(blockIndices)
+        });
+    }
+
     for (u32 i = 0; i + 1 < (u32)entries.size(); i++) {
         bool isPerm = (strncmp(entries[i].magic, ".RCI", 4) == 0 ||
                        strncmp(entries[i].magic, ".PCI", 4) == 0);
@@ -1775,8 +1834,8 @@ bool AssetExporter::ExportLevel(const std::vector<u8>& rawData,
 
     auto manifests = ExportTexChunks(decoded, outputDir + "/textures");
 
-    if (geometries.empty()) {
-        LOG("[AssetExporter] No geometry: %s", levelName.c_str());
+    if (geometries.empty() && blockGeometries.empty()) {
+        LOG("[AssetExporter] No render geometry: %s", levelName.c_str());
         return !manifests.empty();
     }
 
@@ -1786,7 +1845,48 @@ bool AssetExporter::ExportLevel(const std::vector<u8>& rawData,
         wroteGeometry |= WriteGLB(outputDir + "/geometry/" + geometry.name + ".glb",
                                   geometry.name, groups, "../textures/");
     }
-    return wroteGeometry || !manifests.empty();
+
+    bool wroteBlocks = false;
+    std::ostringstream blockIndex;
+    blockIndex << "{\"schema\":\"rechan.block-export.v1\","
+               << "\"mapping\":\"filter parameters_petalNN.objects by kind=block; match by sequence\","
+               << "\"blocks\":[";
+    bool firstBlock = true;
+    for (const auto& block : blockGeometries) {
+        char petalDir[32];
+        char blockFile[32];
+        char meshName[64];
+        std::snprintf(petalDir, sizeof(petalDir), "petal%02u", block.petalIndex);
+        std::snprintf(blockFile, sizeof(blockFile), "block%03u.glb", block.blockSequence);
+        std::snprintf(meshName, sizeof(meshName), "petal%02u_block%03u",
+                      block.petalIndex, block.blockSequence);
+
+        auto groups = GroupByMaterial(block.verts, block.indices, manifests);
+        const std::string blockPath = outputDir + "/blocks/" + petalDir + "/" + blockFile;
+        const bool wroteBlock = WriteGLB(blockPath, meshName, groups, "../../textures/");
+        wroteBlocks |= wroteBlock;
+        if (!wroteBlock) continue;
+
+        if (!firstBlock) blockIndex << ',';
+        firstBlock = false;
+        blockIndex << "{\"petal\":" << block.petalIndex
+                   << ",\"sequence\":" << block.blockSequence
+                   << ",\"path\":\"" << petalDir << '/' << blockFile << "\""
+                   << ",\"vertices\":" << block.verts.size()
+                   << ",\"triangles\":" << (block.indices.size() / 3u)
+                   << '}';
+    }
+    blockIndex << "]}\n";
+    if (wroteBlocks) {
+        p3d::io::CreateDirectories(outputDir + "/blocks");
+        if (!p3d::io::WriteTextFile(outputDir + "/blocks/index.json", blockIndex.str())) {
+            LOG("[AssetExporter] Failed writing block index: %s", levelName.c_str());
+        }
+    }
+
+    LOG("[AssetExporter] Level export summary: %s namedGeo=%zu blocks=%zu textures=%zu",
+        levelName.c_str(), geometries.size(), blockGeometries.size(), manifests.size());
+    return wroteGeometry || wroteBlocks || !manifests.empty();
 }
 
 
