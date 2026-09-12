@@ -10,7 +10,23 @@
 
 // Asset Exporter window
 
-static const char* kCategoryNames[] = { "All", "Texture", "SkeletalMesh", "StaticMesh", "ETreeMesh", "Sound", "Data" };
+static const char* kCategoryNames[] = {
+    "All",
+    "Texture",
+    "SkeletalMesh",
+    "StaticMesh / Level (legacy)",
+    "ETreeMesh",
+    "Sound",
+    "Data",
+    "Level (FULL: JSON + Geometry + Blocks + Collision + Textures + Raw)"
+};
+static constexpr int kFullLevelCategory = 7;
+
+static bool AssetExporterCategoryMatches(const AssetEntry& entry, int categoryFilter) {
+    if (categoryFilter == 0) return true;
+    if (categoryFilter == kFullLevelCategory) return entry.category == AssetCategory::StaticMesh;
+    return entry.category == static_cast<AssetCategory>(categoryFilter - 1);
+}
 
 static char sOutputDir[256] = "~mods/ExportedAssets";
 static int sCategoryFilter = 0;
@@ -36,8 +52,8 @@ void DrawAssetExporterWindow(bool* pOpen) {
 
     // Output directory
     ImGui::InputText("Output Dir", sOutputDir, sizeof(sOutputDir));
-    ImGui::TextDisabled("Exports are immediately usable as a drag-and-drop mod; no manifest is generated.");
-    ImGui::TextDisabled("PNG/WAV/GLB identity comes from folder scope + filename. JSON is game parameters only.");
+    ImGui::TextDisabled("Exports include modern assets plus discovery manifests and preserved raw source data.");
+    ImGui::TextDisabled("Existing PNG/WAV/GLB mod paths remain unchanged; the extra indexes are tooling metadata.");
 
     // Category filter
     ImGui::Combo("Category", &sCategoryFilter, kCategoryNames, IM_ARRAYSIZE(kCategoryNames));
@@ -52,6 +68,9 @@ void DrawAssetExporterWindow(bool* pOpen) {
         if (sCategoryFilter == 0) {
             exporter.ExportAllCategories(sOutputDir, nullptr);
         }
+        else if (sCategoryFilter == kFullLevelCategory) {
+            exporter.ExportAll(sOutputDir, AssetCategory::StaticMesh, true, nullptr);
+        }
         else {
             AssetCategory filterCat = static_cast<AssetCategory>(sCategoryFilter - 1);
             exporter.ExportAll(sOutputDir, filterCat, true, nullptr);
@@ -61,26 +80,28 @@ void DrawAssetExporterWindow(bool* pOpen) {
     ImGui::SameLine();
     if (ImGui::Button("Export Visible")) {
         for (const auto& entry : exporter.GetEntries()) {
-            if (sCategoryFilter > 0 &&
-                entry.category != static_cast<AssetCategory>(sCategoryFilter - 1)) continue;
+            if (!AssetExporterCategoryMatches(entry, sCategoryFilter)) continue;
             if (sNameFilter[0] != '\0' &&
                 entry.name.find(sNameFilter) == std::string::npos) continue;
             exporter.ExportEntry(entry, sOutputDir);
         }
     }
 
+    ImGui::SameLine();
+    if (ImGui::Button("Export Complete Archive")) {
+        exporter.ExportAllCategories(sOutputDir, nullptr);
+    }
+
     ImGui::Separator();
-    ImGui::TextDisabled("Select an asset to export it. Levels include named geometry, palette-correct textures, and petal parameters.");
+    ImGui::TextDisabled("FULL Level export: petal JSON + named geometry + BLK render geometry + collision + textures + manifests + exact raw level stream.");
+    ImGui::TextDisabled("Complete Archive also snapshots the full extracted game asset tree (FE/RCHARS/RTARGET/SCR/SOUND/TIM/XC + root files) under raw_game/.");
     ImGui::TextDisabled("RSDIALOG.DLG exports every spoken character/dialog/variant as an override-ready WAV.");
 
     // Asset list
     if (ImGui::BeginChild("AssetList", ImVec2(0, 0), true)) {
         for (const auto& entry : exporter.GetEntries()) {
             // Apply category filter
-            if (sCategoryFilter > 0) {
-                AssetCategory filterCat = static_cast<AssetCategory>(sCategoryFilter - 1);
-                if (entry.category != filterCat) continue;
-            }
+            if (!AssetExporterCategoryMatches(entry, sCategoryFilter)) continue;
 
             // Apply name filter
             if (sNameFilter[0] != '\0') {
@@ -88,9 +109,13 @@ void DrawAssetExporterWindow(bool* pOpen) {
             }
 
             char label[512];
+            const char* visibleCategory =
+                (sCategoryFilter == kFullLevelCategory && entry.category == AssetCategory::StaticMesh)
+                    ? "FullLevel"
+                    : AssetEntry::CategoryName(entry.category);
             std::snprintf(label, sizeof(label), "%s (%s) [%s]###%s",
                           entry.name.c_str(),
-                          AssetEntry::CategoryName(entry.category),
+                          visibleCategory,
                           entry.filePath.c_str(),
                           entry.name.c_str());
 

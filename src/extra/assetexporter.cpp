@@ -6,6 +6,9 @@
 #include "gen/skeleton.h"
 #include "gen/world.h"
 #include "gen/psxcolor_helpers.h"
+#include "gen/colsect.h"
+#include "gen/colwall.h"
+#include "gen/colfloor.h"
 #include "pc/log.h"
 #include "pc/tim.h"
 #include "p3d/byteread.h"
@@ -208,6 +211,28 @@ void AssetExporter::ScanTIMDirectory() {
             m_entries.push_back(std::move(asset));
         }
         break;
+    }
+
+    // The disc extractor also places several TIMs at the game root rather than TIM/.
+    // Include them in the modern PNG catalog so the complete archive has both the
+    // exact originals (raw_game/) and convenient decoded images.
+    const char* rootTimFiles[] = {
+        "license.tim", "postdemo.tim", "predemo.tim", "runfirst.tim", nullptr
+    };
+    for (int i = 0; rootTimFiles[i]; ++i) {
+        const std::string resolved = p3d::io::ResolvePath(rootTimFiles[i]);
+        if (!p3d::io::FileExists(resolved)) continue;
+
+        std::string stem = std::filesystem::path(rootTimFiles[i]).stem().string();
+        std::transform(stem.begin(), stem.end(), stem.begin(),
+                       [](char c) { return static_cast<char>(std::tolower(static_cast<unsigned char>(c))); });
+
+        AssetEntry asset;
+        asset.name = stem;
+        asset.category = AssetCategory::Texture;
+        asset.filePath = p3d::io::NormalizeSeparators(resolved);
+        asset.crc = p3dHash(stem.c_str());
+        m_entries.push_back(std::move(asset));
     }
 }
 
@@ -886,6 +911,44 @@ bool AssetExporter::ExportCharacter(const std::vector<u8>& rawData,
         if (off == 0 || sz == 0 || off + sz > rrSize) return false;
         rdata = rrData + off; rsize = sz; return true;
     };
+
+    // Preserve the exact RR and every declared resource. This captures animation
+    // and other resource types that do not yet have a lossless modern converter.
+    p3d::io::CreateDirectories(outputDir + "/raw");
+    p3d::io::CreateDirectories(outputDir + "/resources");
+    p3d::io::WriteFile(outputDir + "/raw/source.rr", rawData);
+    std::ostringstream rrIndex;
+    rrIndex << "{\"schema\":\"rechan.character-resources.v1\",\"character\":\""
+            << charName << "\",\"source\":\"../raw/source.rr\",\"resources\":[";
+    for (u32 resourceIndex = 0; resourceIndex < entryCount; ++resourceIndex) {
+        const u32 off = p3dReadU32LE(rrData + resourceIndex * 8);
+        const u32 sz = p3dReadU32LE(rrData + resourceIndex * 8 + 4) >> 8;
+        const bool valid = off != 0 && sz != 0 && off <= rrSize && sz <= rrSize - off;
+        if (resourceIndex != 0) rrIndex << ',';
+        rrIndex << "{\"index\":" << resourceIndex << ",\"offset\":" << off
+                << ",\"size\":" << sz << ",\"valid\":" << (valid ? "true" : "false");
+        if (valid) {
+            char resourceName[48];
+            std::snprintf(resourceName, sizeof(resourceName), "res%03u.bin", resourceIndex);
+            std::vector<u8> resourceBytes(rrData + off, rrData + off + sz);
+            const std::string resourcePath = outputDir + "/resources/" + resourceName;
+            const bool wroteResource = p3d::io::WriteFile(resourcePath, resourceBytes);
+            const bool isP3d = sz >= 6 && p3dReadU16LE(rrData + off) == 0xFF04;
+            rrIndex << ",\"path\":";
+            if (wroteResource) rrIndex << "\"" << resourceName << "\""; else rrIndex << "null";
+            rrIndex << ",\"p3d\":" << (isP3d ? "true" : "false");
+            if (isP3d) {
+                char jsonName[64];
+                std::snprintf(jsonName, sizeof(jsonName), "res%03u_chunks.json", resourceIndex);
+                if (ConvertDataToJSON(resourceBytes, outputDir + "/resources/" + jsonName)) {
+                    rrIndex << ",\"chunkTree\":\"" << jsonName << "\"";
+                }
+            }
+        }
+        rrIndex << '}';
+    }
+    rrIndex << "]}\n";
+    p3d::io::WriteTextFile(outputDir + "/resources/index.json", rrIndex.str());
 
     // Raw tPrimGeom mesh data lives at resource index 2, paired with the
     // textures+skeleton P3D container at resource index 3 (see CharMgr::
@@ -1591,6 +1654,55 @@ bool AssetExporter::ExportLevel(const std::vector<u8>& rawData,
     auto entries = ParseLcfHeader(data, dataSize);
     if (entries.empty()) return false;
 
+    auto jsonEscape = [](const std::string& input) {
+        std::string out;
+        out.reserve(input.size() + 8);
+        for (char c : input) {
+            switch (c) {
+                case '\\': out += "\\\\"; break;
+                case '"': out += "\\\""; break;
+                case '\n': out += "\\n"; break;
+                case '\r': out += "\\r"; break;
+                case '\t': out += "\\t"; break;
+                default: out += c; break;
+            }
+        }
+        return out;
+    };
+
+    // Keep the exact level stream as a future-proof source. Any format that is
+    // not decoded today can still be investigated later without another game build.
+    p3d::io::CreateDirectories(outputDir + "/raw");
+    const bool wroteRawLevel = p3d::io::WriteFile(outputDir + "/raw/level_source.bin", rawData);
+
+    // Describe every LCF/GCF stream entry, including entries we do not yet decode.
+    std::ostringstream streamManifest;
+    streamManifest << "{\"schema\":\"rechan.level-stream.v1\",\"level\":\""
+                   << jsonEscape(levelName) << "\",\"source\":\"raw/level_source.bin\",\"entries\":[";
+    s32 streamPetal = -1;
+    for (u32 entryIndex = 0; entryIndex < static_cast<u32>(entries.size()); ++entryIndex) {
+        const LcfEntry& entry = entries[entryIndex];
+        if (strncmp(entry.magic, ".WDB", 4) == 0) ++streamPetal;
+        const char* role = "unknown";
+        if (strncmp(entry.magic, ".WDB", 4) == 0) role = "parameters";
+        else if (strncmp(entry.magic, ".BLK", 4) == 0) role = "block";
+        else if (strncmp(entry.magic, ".TPG", 4) == 0) role = "texture-page";
+        else if (strncmp(entry.magic, ".RCI", 4) == 0) role = "runtime-geometry-data";
+        else if (strncmp(entry.magic, ".RCP", 4) == 0) role = "runtime-geometry-descriptor";
+        else if (strncmp(entry.magic, ".PCI", 4) == 0) role = "petal-geometry-data";
+        else if (strncmp(entry.magic, ".PCP", 4) == 0) role = "petal-geometry-descriptor";
+
+        if (entryIndex != 0) streamManifest << ',';
+        streamManifest << "{\"index\":" << entryIndex
+                       << ",\"magic\":\"" << jsonEscape(std::string(entry.magic, 4)) << "\""
+                       << ",\"role\":\"" << role << "\""
+                       << ",\"size\":" << entry.size
+                       << ",\"offset\":" << entry.offset
+                       << ",\"petal\":" << streamPetal << '}';
+    }
+    streamManifest << "]}\n";
+    p3d::io::WriteTextFile(outputDir + "/stream_manifest.json", streamManifest.str());
+
     u32 parameterSet = 0;
     for (const auto& entry : entries) {
         if (strncmp(entry.magic, ".WDB", 4) != 0) continue;
@@ -1619,19 +1731,49 @@ bool AssetExporter::ExportLevel(const std::vector<u8>& rawData,
     std::vector<PrimGeomVertex> allVerts; // texture page discovery only
 
     // BLK entries contain the actual playable-world tPrimGeom used by Block::Draw.
-    // Keep them separate from named 0x6002 geometry: their placement comes from
-    // the matching WDB block volume, while their vertices stay block-local.
-    // A new petal starts at each .WDB; BLKs that follow map 1:1, in order, to
-    // the objects obtained by filtering parameters_petalNN.json for kind="block".
-    // Do not use the JSON "ordinal" as a global index: parameter ordinals are
-    // counted per (kind,name), so the stable cross-file key here is block sequence.
+    // Each BLK is matched by sequence to the WDB block objects in the same petal.
     struct BlockLevelGeometry {
         u32 petalIndex = 0;
         u32 blockSequence = 0;
+        u32 sourceSize = 0;
+        u32 runtimeParsedFlag = 0;
+        s16 headerX = 0;
+        s16 headerY = 0;
+        s16 headerZ = 0;
+        u32 collisionOffset = 0;
+        bool renderExtracted = false;
         std::vector<PrimGeomVertex> verts;
         std::vector<u32> indices;
+        bool collisionParsed = false;
+        u32 collisionWallCount = 0;
+        u32 collisionFloorCount = 0;
+        std::vector<PrimGeomVertex> collisionVerts;
+        std::vector<u32> collisionIndices;
+        std::string collisionMetadata;
     };
     std::vector<BlockLevelGeometry> blockGeometries;
+    u32 sourceBlkEntries = 0;
+    u32 renderExtractFailures = 0;
+    u32 collisionExtractFailures = 0;
+    u32 runtimeParsedFlagZero = 0;
+
+    auto collisionVertex = [](const LVector& p) {
+        PrimGeomVertex v = {};
+        v.x = static_cast<f32>(p.x);
+        v.y = static_cast<f32>(p.y);
+        v.z = static_cast<f32>(p.z);
+        v.r = 0.72f; v.g = 0.82f; v.b = 0.90f;
+        v.u = 0.0f; v.v = 0.0f; v.tpage = -1.0f; v.cba = 0.0f;
+        return v;
+    };
+    auto appendCollisionTri = [&](std::vector<PrimGeomVertex>& verts, std::vector<u32>& indices,
+                                  const LVector& a, const LVector& b, const LVector& c) {
+        const u32 base = static_cast<u32>(verts.size());
+        verts.push_back(collisionVertex(a));
+        verts.push_back(collisionVertex(b));
+        verts.push_back(collisionVertex(c));
+        indices.push_back(base); indices.push_back(base + 1); indices.push_back(base + 2);
+    };
 
     s32 currentPetal = -1;
     u32 blockSequence = 0;
@@ -1643,38 +1785,119 @@ bool AssetExporter::ExportLevel(const std::vector<u8>& rawData,
         }
         if (strncmp(entry.magic, ".BLK", 4) != 0) continue;
 
-        const u32 sequence = blockSequence++;
+        ++sourceBlkEntries;
+        BlockLevelGeometry block;
+        block.petalIndex = currentPetal >= 0 ? static_cast<u32>(currentPetal) : 0u;
+        block.blockSequence = blockSequence++;
+        block.sourceSize = entry.size;
+
         if (currentPetal < 0 || entry.size < 24u + 108u) {
+            ++renderExtractFailures;
+            ++collisionExtractFailures;
             LOG("[AssetExporter] Skip invalid BLK: petal=%d sequence=%u size=%u",
-                currentPetal, sequence, entry.size);
+                currentPetal, block.blockSequence, entry.size);
+            blockGeometries.push_back(std::move(block));
             continue;
         }
 
         const u8* blockData = data + entry.offset;
-        // Block::Parse uses d[4] (+16) as the 'has prims' flag and passes
-        // BLK+24 to Block::LoadPrim. Mirror that exact runtime boundary here.
-        if (p3dReadU32LE(blockData + 16) == 0) {
-            LOG("[AssetExporter] BLK has no render prims: petal=%d sequence=%u",
-                currentPetal, sequence);
-            continue;
+        block.headerX = p3dReadS16LE(blockData + 8);
+        block.headerY = p3dReadS16LE(blockData + 10);
+        block.headerZ = p3dReadS16LE(blockData + 12);
+        block.runtimeParsedFlag = p3dReadU32LE(blockData + 16);
+        block.collisionOffset = p3dReadU32LE(blockData + 20);
+        if (block.runtimeParsedFlag == 0) ++runtimeParsedFlagZero;
+
+        // Runtime always calls LoadPrim(BLK+24), regardless of d[4]/+16. Mirror
+        // that behavior exactly instead of treating the parsed flag as a gate.
+        if (ExtractPrimGeomVerts(blockData + 24, entry.size - 24u,
+                                 block.verts, block.indices)) {
+            block.renderExtracted = true;
+            allVerts.insert(allVerts.end(), block.verts.begin(), block.verts.end());
+        }
+        else {
+            ++renderExtractFailures;
+            LOG("[AssetExporter] BLK render extraction failed: petal=%d sequence=%u size=%u parsedFlag=%u",
+                currentPetal, block.blockSequence, entry.size, block.runtimeParsedFlag);
         }
 
-        std::vector<PrimGeomVertex> blockVerts;
-        std::vector<u32> blockIndices;
-        if (!ExtractPrimGeomVerts(blockData + 24, entry.size - 24u,
-                                  blockVerts, blockIndices)) {
-            LOG("[AssetExporter] BLK tPrimGeom export failed: petal=%d sequence=%u size=%u",
-                currentPetal, sequence, entry.size);
-            continue;
+        // Collision starts at the BLK header's +20 byte offset. Validate the
+        // inline wall/floor arrays before asking the reversed collision classes
+        // to reconstruct polygon vertices. Walls are 56 B; floor records are 80 B.
+        const u32 collisionOffset = block.collisionOffset;
+        if (collisionOffset <= entry.size && entry.size - collisionOffset >= 48u) {
+            const u8* collisionData = blockData + collisionOffset;
+            const u32 wallCount = p3dReadU32LE(collisionData + 36);
+            const u32 floorCount = p3dReadU32LE(collisionData + 40);
+            const u64 requiredSize = 48ull + static_cast<u64>(wallCount) * 56ull
+                                         + static_cast<u64>(floorCount) * 80ull;
+            if (requiredSize <= static_cast<u64>(entry.size - collisionOffset)) {
+                CollisionSector sector;
+                sector.Load(reinterpret_cast<u32*>(const_cast<u8*>(collisionData)));
+                block.collisionParsed = true;
+                block.collisionWallCount = sector.wallCount;
+                block.collisionFloorCount = sector.floorCount;
+
+                std::ostringstream collisionJson;
+                collisionJson << "{\"schema\":\"rechan.collision-block.v1\","
+                              << "\"boundsMin\":[" << sector.boundsMin.x << ',' << sector.boundsMin.y << ',' << sector.boundsMin.z << "],"
+                              << "\"boundsMax\":[" << sector.boundsMax.x << ',' << sector.boundsMax.y << ',' << sector.boundsMax.z << "],"
+                              << "\"walls\":[";
+
+                for (u32 wallIndex = 0; wallIndex < sector.wallCount; ++wallIndex) {
+                    const Wall& wall = sector.walls[wallIndex];
+                    if (wallIndex != 0) collisionJson << ',';
+                    collisionJson << "{\"normalX\":" << wall.normalX << ",\"normalZ\":" << wall.normalZ
+                                  << ",\"distance\":" << wall.distance << ",\"flags\":" << wall.flags
+                                  << ",\"topSlope\":" << wall.topSlope << ",\"topIntercept\":" << wall.topIntercept
+                                  << ",\"bottomSlope\":" << wall.bottomSlope << ",\"bottomIntercept\":" << wall.bottomIntercept
+                                  << ",\"xBound1\":" << wall.xBound1 << ",\"zBound1\":" << wall.zBound1
+                                  << ",\"xBound2\":" << wall.xBound2 << ",\"zBound2\":" << wall.zBound2 << '}';
+                    LVector v0 = {}, v1 = {}, v2 = {}, v3 = {};
+                    wall.Get(v0, v1, v2, v3);
+                    appendCollisionTri(block.collisionVerts, block.collisionIndices, v0, v1, v2);
+                    appendCollisionTri(block.collisionVerts, block.collisionIndices, v0, v2, v3);
+                }
+
+                collisionJson << "],\"floors\":[";
+                u8* floorBase = reinterpret_cast<u8*>(sector.floors);
+                for (u32 floorIndex = 0; floorIndex < sector.floorCount; ++floorIndex) {
+                    Floor* floor = reinterpret_cast<Floor*>(floorBase + floorIndex * 80u);
+                    if (floorIndex != 0) collisionJson << ',';
+                    collisionJson << "{\"normalX\":" << floor->normalX << ",\"normalZ\":" << floor->normalZ
+                                  << ",\"heightC\":" << floor->heightC << ",\"field0C\":" << floor->field0C
+                                  << ",\"flags\":" << floor->flags << ",\"bounds\":" << floor->BoundNumber() << '}';
+                    LVector v0 = {}, v1 = {}, v2 = {}, v3 = {};
+                    if (!floor->Get(v0, v1, v2, v3)) continue;
+                    if (floor->BoundNumber() == 3) {
+                        appendCollisionTri(block.collisionVerts, block.collisionIndices, v0, v1, v3);
+                    }
+                    else {
+                        appendCollisionTri(block.collisionVerts, block.collisionIndices, v0, v1, v2);
+                        appendCollisionTri(block.collisionVerts, block.collisionIndices, v0, v2, v3);
+                    }
+                }
+                collisionJson << "]}\n";
+                block.collisionMetadata = collisionJson.str();
+                sector.Unload();
+            }
+            else {
+                ++collisionExtractFailures;
+                LOG("[AssetExporter] BLK collision layout out of range: petal=%d sequence=%u walls=%u floors=%u",
+                    currentPetal, block.blockSequence, wallCount, floorCount);
+            }
+        }
+        else {
+            ++collisionExtractFailures;
+            LOG("[AssetExporter] BLK collision offset invalid: petal=%d sequence=%u offset=%u size=%u",
+                currentPetal, block.blockSequence, collisionOffset, entry.size);
         }
 
-        allVerts.insert(allVerts.end(), blockVerts.begin(), blockVerts.end());
-        LOG("[AssetExporter] BLK geometry: petal=%d sequence=%u verts=%zu tris=%zu",
-            currentPetal, sequence, blockVerts.size(), blockIndices.size() / 3u);
-        blockGeometries.push_back(BlockLevelGeometry{
-            static_cast<u32>(currentPetal), sequence,
-            std::move(blockVerts), std::move(blockIndices)
-        });
+        LOG("[AssetExporter] BLK: petal=%d sequence=%u render=%s verts=%zu tris=%zu collision=%s walls=%u floors=%u",
+            currentPetal, block.blockSequence, block.renderExtracted ? "yes" : "no",
+            block.verts.size(), block.indices.size() / 3u, block.collisionParsed ? "yes" : "no",
+            block.collisionWallCount, block.collisionFloorCount);
+        blockGeometries.push_back(std::move(block));
     }
 
     for (u32 i = 0; i + 1 < (u32)entries.size(); i++) {
@@ -1834,60 +2057,176 @@ bool AssetExporter::ExportLevel(const std::vector<u8>& rawData,
 
     auto manifests = ExportTexChunks(decoded, outputDir + "/textures");
 
-    if (geometries.empty() && blockGeometries.empty()) {
-        LOG("[AssetExporter] No render geometry: %s", levelName.c_str());
-        return !manifests.empty();
+    // Texture index keeps VRAM/page metadata that PNG filenames alone cannot.
+    std::ostringstream textureIndex;
+    textureIndex << "{\"schema\":\"rechan.texture-index.v1\",\"textures\":[";
+    for (size_t i = 0; i < manifests.size(); ++i) {
+        const TexManifest& m = manifests[i];
+        if (i != 0) textureIndex << ',';
+        textureIndex << "{\"name\":\"" << jsonEscape(m.name) << "\""
+                     << ",\"path\":\"" << jsonEscape(m.name) << ".png\""
+                     << ",\"rx\":" << m.rx << ",\"ry\":" << m.ry
+                     << ",\"rw\":" << m.rw << ",\"rh\":" << m.rh
+                     << ",\"px\":" << m.px << ",\"py\":" << m.py
+                     << ",\"pw\":" << m.pw << ",\"ph\":" << m.ph
+                     << ",\"tx\":" << static_cast<u32>(m.tx)
+                     << ",\"ty\":" << static_cast<u32>(m.ty) << '}';
     }
+    textureIndex << "]}\n";
+    p3d::io::WriteTextFile(outputDir + "/textures/index.json", textureIndex.str());
 
     bool wroteGeometry = false;
+    std::vector<std::string> writtenGeometryNames;
+    std::vector<std::string> backgroundNames;
+    std::ostringstream geometryIndex;
+    geometryIndex << "{\"schema\":\"rechan.geometry-index.v1\",\"geometry\":[";
+    bool firstGeometry = true;
     for (const auto& geometry : geometries) {
         auto groups = GroupByMaterial(geometry.verts, geometry.indices, manifests);
-        wroteGeometry |= WriteGLB(outputDir + "/geometry/" + geometry.name + ".glb",
-                                  geometry.name, groups, "../textures/");
+        const bool wrote = WriteGLB(outputDir + "/geometry/" + geometry.name + ".glb",
+                                    geometry.name, groups, "../textures/");
+        wroteGeometry |= wrote;
+        if (!wrote) continue;
+        writtenGeometryNames.push_back(geometry.name);
+        bool isBackground = geometry.name.size() >= 4 && geometry.name[0] == 'b' && geometry.name[1] == 'g';
+        for (size_t c = 2; isBackground && c < geometry.name.size(); ++c) {
+            if (geometry.name[c] < '0' || geometry.name[c] > '9') isBackground = false;
+        }
+        if (isBackground) backgroundNames.push_back(geometry.name);
+        if (!firstGeometry) geometryIndex << ',';
+        firstGeometry = false;
+        geometryIndex << "{\"name\":\"" << jsonEscape(geometry.name) << "\""
+                      << ",\"path\":\"" << jsonEscape(geometry.name) << ".glb\""
+                      << ",\"vertices\":" << geometry.verts.size()
+                      << ",\"triangles\":" << (geometry.indices.size() / 3u)
+                      << ",\"background\":" << (isBackground ? "true" : "false") << '}';
     }
+    geometryIndex << "]}\n";
+    p3d::io::CreateDirectories(outputDir + "/geometry");
+    p3d::io::WriteTextFile(outputDir + "/geometry/index.json", geometryIndex.str());
+
+    std::ostringstream backgroundIndex;
+    backgroundIndex << "{\"schema\":\"rechan.background-index.v1\","
+                    << "\"note\":\"BG meshes use the game's dedicated BackG runtime; these are source assets, not ordinary prop placement\","
+                    << "\"geometry\":[";
+    for (size_t i = 0; i < backgroundNames.size(); ++i) {
+        if (i != 0) backgroundIndex << ',';
+        backgroundIndex << "{\"name\":\"" << jsonEscape(backgroundNames[i])
+                        << "\",\"path\":\"../geometry/" << jsonEscape(backgroundNames[i]) << ".glb\"}";
+    }
+    backgroundIndex << "]}\n";
+    p3d::io::CreateDirectories(outputDir + "/background");
+    p3d::io::WriteTextFile(outputDir + "/background/index.json", backgroundIndex.str());
 
     bool wroteBlocks = false;
+    bool wroteCollision = false;
+    u32 renderExtractedCount = 0;
+    u32 renderWrittenCount = 0;
+    u32 collisionParsedCount = 0;
+    u32 collisionWrittenCount = 0;
     std::ostringstream blockIndex;
-    blockIndex << "{\"schema\":\"rechan.block-export.v1\","
+    blockIndex << "{\"schema\":\"rechan.block-export.v3\","
                << "\"mapping\":\"filter parameters_petalNN.objects by kind=block; match by sequence\","
-               << "\"blocks\":[";
+               << "\"sourceBlkEntries\":" << sourceBlkEntries
+               << ",\"renderExtractFailures\":" << renderExtractFailures
+               << ",\"collisionExtractFailures\":" << collisionExtractFailures
+               << ",\"runtimeParsedFlagZero\":" << runtimeParsedFlagZero
+               << ",\"blocks\":[";
     bool firstBlock = true;
     for (const auto& block : blockGeometries) {
         char petalDir[32];
         char blockFile[32];
+        char collisionFile[32];
         char meshName[64];
+        char collisionMeshName[80];
         std::snprintf(petalDir, sizeof(petalDir), "petal%02u", block.petalIndex);
         std::snprintf(blockFile, sizeof(blockFile), "block%03u.glb", block.blockSequence);
-        std::snprintf(meshName, sizeof(meshName), "petal%02u_block%03u",
-                      block.petalIndex, block.blockSequence);
+        std::snprintf(collisionFile, sizeof(collisionFile), "block%03u.glb", block.blockSequence);
+        std::snprintf(meshName, sizeof(meshName), "petal%02u_block%03u", block.petalIndex, block.blockSequence);
+        std::snprintf(collisionMeshName, sizeof(collisionMeshName), "petal%02u_block%03u_collision", block.petalIndex, block.blockSequence);
 
-        auto groups = GroupByMaterial(block.verts, block.indices, manifests);
-        const std::string blockPath = outputDir + "/blocks/" + petalDir + "/" + blockFile;
-        const bool wroteBlock = WriteGLB(blockPath, meshName, groups, "../../textures/");
-        wroteBlocks |= wroteBlock;
-        if (!wroteBlock) continue;
+        bool wroteBlock = false;
+        bool wroteCollisionBlock = false;
+        if (block.renderExtracted) {
+            ++renderExtractedCount;
+            auto groups = GroupByMaterial(block.verts, block.indices, manifests);
+            wroteBlock = WriteGLB(outputDir + "/blocks/" + petalDir + "/" + blockFile,
+                                  meshName, groups, "../../textures/");
+            if (wroteBlock) { ++renderWrittenCount; wroteBlocks = true; }
+        }
+        if (block.collisionParsed) {
+            ++collisionParsedCount;
+            const std::string collisionDir = outputDir + "/collision/" + petalDir;
+            p3d::io::CreateDirectories(collisionDir);
+            if (!block.collisionMetadata.empty()) {
+                char metadataFile[32];
+                std::snprintf(metadataFile, sizeof(metadataFile), "block%03u.json", block.blockSequence);
+                p3d::io::WriteTextFile(collisionDir + "/" + metadataFile, block.collisionMetadata);
+            }
+            if (!block.collisionIndices.empty()) {
+                auto collisionGroups = GroupByMaterial(block.collisionVerts, block.collisionIndices, {});
+                wroteCollisionBlock = WriteGLB(collisionDir + "/" + collisionFile,
+                                               collisionMeshName, collisionGroups, "");
+                if (wroteCollisionBlock) { ++collisionWrittenCount; wroteCollision = true; }
+            }
+        }
 
         if (!firstBlock) blockIndex << ',';
         firstBlock = false;
         blockIndex << "{\"petal\":" << block.petalIndex
                    << ",\"sequence\":" << block.blockSequence
-                   << ",\"path\":\"" << petalDir << '/' << blockFile << "\""
-                   << ",\"vertices\":" << block.verts.size()
-                   << ",\"triangles\":" << (block.indices.size() / 3u)
-                   << '}';
+                   << ",\"sourceSize\":" << block.sourceSize
+                   << ",\"headerPosition\":[" << block.headerX << ',' << block.headerY << ',' << block.headerZ << ']'
+                   << ",\"runtimeParsedFlag\":" << block.runtimeParsedFlag
+                   << ",\"collisionOffset\":" << block.collisionOffset
+                   << ",\"renderExtracted\":" << (block.renderExtracted ? "true" : "false")
+                   << ",\"renderPath\":";
+        if (wroteBlock) blockIndex << "\"" << petalDir << '/' << blockFile << "\""; else blockIndex << "null";
+        blockIndex << ",\"renderVertices\":" << block.verts.size()
+                   << ",\"renderTriangles\":" << (block.indices.size() / 3u)
+                   << ",\"collisionParsed\":" << (block.collisionParsed ? "true" : "false")
+                   << ",\"collisionPath\":";
+        if (wroteCollisionBlock) blockIndex << "\"../collision/" << petalDir << '/' << collisionFile << "\""; else blockIndex << "null";
+        blockIndex << ",\"collisionMetadata\":";
+        if (block.collisionParsed) blockIndex << "\"../collision/" << petalDir << "/block"
+                                              << (block.blockSequence < 100 ? (block.blockSequence < 10 ? "00" : "0") : "")
+                                              << block.blockSequence << ".json\"";
+        else blockIndex << "null";
+        blockIndex << ",\"collisionWalls\":" << block.collisionWallCount
+                   << ",\"collisionFloors\":" << block.collisionFloorCount
+                   << ",\"collisionTriangles\":" << (block.collisionIndices.size() / 3u) << '}';
     }
-    blockIndex << "]}\n";
-    if (wroteBlocks) {
+    blockIndex << "],\"renderExtracted\":" << renderExtractedCount
+               << ",\"renderWritten\":" << renderWrittenCount
+               << ",\"collisionParsed\":" << collisionParsedCount
+               << ",\"collisionWritten\":" << collisionWrittenCount << "}\n";
+    if (sourceBlkEntries > 0) {
         p3d::io::CreateDirectories(outputDir + "/blocks");
-        if (!p3d::io::WriteTextFile(outputDir + "/blocks/index.json", blockIndex.str())) {
-            LOG("[AssetExporter] Failed writing block index: %s", levelName.c_str());
-        }
+        p3d::io::WriteTextFile(outputDir + "/blocks/index.json", blockIndex.str());
     }
 
-    LOG("[AssetExporter] Level export summary: %s namedGeo=%zu blocks=%zu textures=%zu",
-        levelName.c_str(), geometries.size(), blockGeometries.size(), manifests.size());
-    return wroteGeometry || wroteBlocks || !manifests.empty();
+    std::ostringstream levelManifest;
+    levelManifest << "{\"schema\":\"rechan.full-level-export.v1\","
+                  << "\"level\":\"" << jsonEscape(levelName) << "\""
+                  << ",\"sourceRaw\":\"raw/level_source.bin\""
+                  << ",\"streamManifest\":\"stream_manifest.json\""
+                  << ",\"petalParameterFiles\":" << parameterSet
+                  << ",\"namedGeometryWritten\":" << writtenGeometryNames.size()
+                  << ",\"backgroundGeometry\":" << backgroundNames.size()
+                  << ",\"texturesWritten\":" << manifests.size()
+                  << ",\"sourceBlocks\":" << sourceBlkEntries
+                  << ",\"blockRenderWritten\":" << renderWrittenCount
+                  << ",\"collisionWritten\":" << collisionWrittenCount
+                  << ",\"paths\":{\"geometry\":\"geometry/index.json\",\"textures\":\"textures/index.json\","
+                  << "\"background\":\"background/index.json\",\"blocks\":\"blocks/index.json\"}}\n";
+    p3d::io::WriteTextFile(outputDir + "/level_manifest.json", levelManifest.str());
+
+    LOG("[AssetExporter] Full level: %s entries=%zu petals=%u namedGeo=%zu bg=%zu textures=%zu sourceBLK=%u renderWritten=%u collisionWritten=%u",
+        levelName.c_str(), entries.size(), parameterSet, writtenGeometryNames.size(), backgroundNames.size(),
+        manifests.size(), sourceBlkEntries, renderWrittenCount, collisionWrittenCount);
+    return wroteRawLevel || parameterSet > 0 || wroteGeometry || wroteBlocks || wroteCollision || !manifests.empty();
 }
+
 
 
 // Export API
@@ -1928,7 +2267,9 @@ bool AssetExporter::ExportEntry(const AssetEntry& entry, const char* outputDir) 
                 }
                 return false;
             }
-            // TIM file
+            // TIM file: keep the exact source beside the modern PNG.
+            p3d::io::CreateDirectories(std::string(outputDir) + "/textures_raw");
+            p3d::io::WriteFile(std::string(outputDir) + "/textures_raw/" + entry.name + ".tim", rawData);
             std::string texPath = std::string(outputDir) + "/textures/" + entry.name + ".png";
             return ConvertTIMtoPNG(rawData, texPath);
         }
@@ -1949,6 +2290,10 @@ bool AssetExporter::ExportEntry(const AssetEntry& entry, const char* outputDir) 
             std::string ext = std::filesystem::path(entry.filePath).extension().string();
             std::transform(ext.begin(), ext.end(), ext.begin(),
                            [](char c) { return static_cast<char>(std::tolower(static_cast<unsigned char>(c))); });
+            // Modern WAVs are convenient, but the original compressed/banked source
+            // is the only lossless future-proof copy for formats we only partly decode.
+            p3d::io::CreateDirectories(std::string(outputDir) + "/sounds_raw");
+            p3d::io::WriteFile(std::string(outputDir) + "/sounds_raw/" + entry.name + ext, rawData);
             if (ext == ".dlg") {
                 return ExportDialogWavs(rawData, std::string(outputDir) + "/sounds/dialog");
             }
@@ -1996,6 +2341,104 @@ int AssetExporter::ExportAll(const char* outputDir,
 int AssetExporter::ExportAllCategories(const char* outputDir,
                                        ExportProgressCallback progress) {
     const int exported = ExportAll(outputDir, AssetCategory::Texture, false, progress);
+
+    // Snapshot the scanned source catalog so external tools can discover every
+    // exported family without reimplementing the game-directory scan.
+    auto escapeCatalog = [](const std::string& input) {
+        std::string out;
+        for (char c : input) {
+            if (c == '\\') out += "\\\\";
+            else if (c == '"') out += "\\\"";
+            else out += c;
+        }
+        return out;
+    };
+    std::ostringstream catalog;
+    catalog << "{\"schema\":\"rechan.asset-catalog.v1\",\"entries\":[";
+    for (size_t i = 0; i < m_entries.size(); ++i) {
+        const AssetEntry& entry = m_entries[i];
+        if (i != 0) catalog << ',';
+        catalog << "{\"name\":\"" << escapeCatalog(entry.name) << "\""
+                << ",\"category\":\"" << AssetEntry::CategoryName(entry.category) << "\""
+                << ",\"source\":\"" << escapeCatalog(entry.filePath) << "\""
+                << ",\"crc\":" << entry.crc
+                << ",\"resourceIndex\":" << entry.resourceIndex << '}';
+    }
+    catalog << "]}\n";
+    p3d::io::WriteTextFile(std::string(outputDir) + "/catalog.json", catalog.str());
+
+    // Preserve the complete runtime asset set extracted from the original disc.
+    // This mirrors PsxDiscExtractor's whitelist exactly, so future tooling can
+    // decode FE/XC/SCR/AMS/SS/STR/etc. without requiring another game build.
+    const std::string rawArchiveRoot = std::string(outputDir) + "/raw_game";
+    p3d::io::CreateDirectories(rawArchiveRoot);
+    const std::string rawArchiveResolved = p3d::io::ResolvePath(rawArchiveRoot);
+
+    std::ostringstream rawArchiveIndex;
+    rawArchiveIndex << "{\"schema\":\"rechan.raw-game-archive.v1\",\"files\":[";
+    bool firstRawFile = true;
+    u64 rawFileCount = 0;
+    u64 rawByteCount = 0;
+
+    auto archiveFile = [&](const std::string& sourcePath, const std::string& relativePath) {
+        const std::string sourceResolved = p3d::io::ResolvePath(sourcePath);
+        if (!p3d::io::FileExists(sourceResolved)) return;
+
+        std::string rel = p3d::io::NormalizeSeparators(relativePath);
+        std::replace(rel.begin(), rel.end(), '\\', '/');
+        while (!rel.empty() && rel.front() == '/') rel.erase(rel.begin());
+        if (rel.empty() || rel.find("..") != std::string::npos) return;
+
+        const std::filesystem::path destination = std::filesystem::path(rawArchiveResolved) / std::filesystem::path(rel);
+        std::error_code ec;
+        std::filesystem::create_directories(destination.parent_path(), ec);
+        ec.clear();
+        std::filesystem::copy_file(sourceResolved, destination, std::filesystem::copy_options::overwrite_existing, ec);
+        if (ec) {
+            LOG("[AssetExporter] Raw archive copy failed: %s -> %s (%s)",
+                sourceResolved.c_str(), destination.string().c_str(), ec.message().c_str());
+            return;
+        }
+
+        ec.clear();
+        const u64 fileSize = static_cast<u64>(std::filesystem::file_size(sourceResolved, ec));
+        const u64 safeSize = ec ? 0u : fileSize;
+        if (!firstRawFile) rawArchiveIndex << ',';
+        firstRawFile = false;
+        rawArchiveIndex << "{\"path\":\"" << escapeCatalog(rel) << "\",\"size\":" << safeSize << '}';
+        ++rawFileCount;
+        rawByteCount += safeSize;
+    };
+
+    const char* rawRootFiles[] = {
+        "license.tim", "license_data.dat", "loadanim.con",
+        "postdemo.tim", "predemo.tim", "runfirst.tim", nullptr
+    };
+    for (int i = 0; rawRootFiles[i]; ++i) archiveFile(rawRootFiles[i], rawRootFiles[i]);
+
+    const char* rawDirs[] = { "fe", "rchars", "rtarget", "scr", "sound", "tim", "xc", nullptr };
+    for (int dirIndex = 0; rawDirs[dirIndex]; ++dirIndex) {
+        const std::string logicalDir = rawDirs[dirIndex];
+        const std::string resolvedDir = p3d::io::ResolvePath(logicalDir);
+        if (!p3d::io::DirExists(resolvedDir)) continue;
+
+        for (const p3d::io::DirEntryInfo& file : p3d::io::ListDirectory(resolvedDir, /*recursive=*/true)) {
+            if (file.isDirectory) continue;
+            const std::filesystem::path relWithin =
+                std::filesystem::path(file.fullPath).lexically_relative(std::filesystem::path(resolvedDir));
+            if (relWithin.empty()) continue;
+            const std::string rel = logicalDir + "/" + relWithin.generic_string();
+            archiveFile(file.fullPath, rel);
+        }
+    }
+
+    rawArchiveIndex << "],\"fileCount\":" << rawFileCount
+                    << ",\"byteCount\":" << rawByteCount << "}\n";
+    p3d::io::WriteTextFile(rawArchiveRoot + "/index.json", rawArchiveIndex.str());
+    LOG("[AssetExporter] Raw game archive: %llu files, %llu bytes",
+        static_cast<unsigned long long>(rawFileCount),
+        static_cast<unsigned long long>(rawByteCount));
+
     p3d::io::InvalidateResolveCache();
     return exported;
 }
